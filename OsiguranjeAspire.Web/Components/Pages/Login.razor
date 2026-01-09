@@ -1,0 +1,32 @@
+﻿@* @using OsiguranjeAspire.Web.Services
+@page "/login"
+@inject AuthApi Auth
+@inject JwtAuthStateProvider AuthState
+@inject NavigationManager Nav
+
+<h3>Login</h3>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <p>@error</p>
+}
+
+<input @bind="email" placeholder="Email" />
+<input @bind="password" placeholder="Password" type="password" />
+<button @onclick="DoLogin">Login</button>
+
+@code {
+    string email = "";
+    string password = "";
+    string? error;
+
+    async Task DoLogin()
+    {
+        var token = await Auth.LoginAsync(email, password);
+        if (token is null) { error = "Invalid credentials."; return; }
+
+        await AuthState.SetTokenAsync(token);
+        Nav.NavigateTo("/");
+    }
+}
+ *@
