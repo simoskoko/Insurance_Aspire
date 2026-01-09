@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.JSInterop;
 using OsiguranjeAspire.ApiService.Data;
 using OsiguranjeAspire.ApiService.Models;
+using OsiguranjeAspire.Web;
 using OsiguranjeAspire.Web.Auth;
 using OsiguranjeAspire.Web.Components;
 using OsiguranjeAspire.Web.Services;
@@ -57,6 +58,23 @@ else
 app.MapDefaultEndpoints();
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
+
+var summaries = new[]
+{
+    "Ledeno", "Hladno", "Hladnjikavo", "Prijatno", "Toplo", "Vrelo"
+};
+
+app.MapGet("/weatherforecast", () =>
+{
+    var forecast = Enumerable.Range(1, 5).Select(index =>
+        new WeatherForecast
+        (
+            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+            Random.Shared.Next(-15, 50),
+            summaries[Random.Shared.Next(summaries.Length)])).ToArray();
+    return forecast;
+});
+
 //app.MapGet("/api/pingdb", async (AppDbContext db) => await db.Database.CanConnectAsync());
 
 //app.MapGet("/api/users", async (AppDbContext db) =>
