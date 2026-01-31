@@ -1,0 +1,43 @@
+﻿@page "/polise"
+@inject PoliciesApiClient PoliciesClient
+@inject IHttpClientFactory ClientFactory
+@using OsiguranjeAspire.Contracts.Polise;
+
+<h3>Policies</h3>
+
+@if (policies == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Policy Number</th>
+                <th>Premium</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in policies)
+            {
+                <tr>
+                    <td>@p.BrPolise</td>
+                    <td>@p.ImeNosilac</td>
+                    <td>@p.Premija</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<PolisaDTO>? policies;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = ClientFactory.CreateClient("api");
+        policies = await PoliciesClient.GetAllAsync();
+    }
+}

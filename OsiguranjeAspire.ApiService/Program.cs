@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.JSInterop;
 using OsiguranjeAspire.ApiService.Data;
 using OsiguranjeAspire.ApiService.Models;
+using OsiguranjeAspire.Contracts.Polise;
 using OsiguranjeAspire.Web;
 using OsiguranjeAspire.Web.Auth;
 using OsiguranjeAspire.Web.Components;
@@ -20,22 +21,11 @@ builder.Services.AddScoped(sp =>
 });
 
 
-//builder.Services.AddAuthorizationCore();
-//builder.Services.AddScoped<JwtAuthStateProvider>();
-//builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthStateProvider>());
-//builder.Services.AddScoped<TokenHttpClientHandler>();
-//builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("api"));
-//builder.Services.AddScoped<AuthApi>();
-
-
 builder.AddServiceDefaults();          // registers health checks, OTEL, discovery, etc.
-builder.Services.AddDbContext<AppDbContext>(opt =>
-{
-    var cs = builder.Configuration.GetConnectionString("DefaultConnection"); // or "Default"
-    if (string.IsNullOrWhiteSpace(cs))
-        throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection");
-    opt.UseSqlServer(cs);
-});
+
+builder.Services.AddDbContext<InsuranceDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddHttpClient("api", client =>
 {
@@ -75,10 +65,23 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 });
 
-//app.MapGet("/api/pingdb", async (AppDbContext db) => await db.Database.CanConnectAsync());
+app.MapGet("/polise", async (InsuranceDbContext db) =>
+    await db.Polise
+        .Select(p => new PolisaDTO
+        {
+            BrPolise = p.BrPolise,
+            ImeNosilac = p.ImeNosilac,
+            JMBGNosilac = p.JMBGNosilac,
+            TipNosilac = p.TipNosilac,
+            VrstaId = p.VrstaId,
+            LOBId = p.LOBId,
+            Premija = p.Premija,
+            VrstaPlacanjaId = p.VrstaPlacanjaId,
+            DatumPocetka = p.DatumPocetka,
+            DatumIsteka = p.DatumIsteka
+            // map fields explicitly
+        })
+        .ToListAsync());
 
-//app.MapGet("/api/users", async (AppDbContext db) =>
-//    await db.Users.AsNoTracking().ToListAsync());
 
-//app.MapFallbackToPage("/_Host");
 app.Run();
