@@ -1,7 +1,10 @@
-﻿namespace OsiguranjeAspire.ApiService.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace OsiguranjeAspire.ApiService.Models
 {
     public class Polisa
     {
+        [Key]
         public int BrPolise { get; set; }
         public string JMBGNosilac { get; set; }
         public string ImeNosilac { get; set; }

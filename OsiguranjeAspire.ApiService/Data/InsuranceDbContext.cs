@@ -4,9 +4,9 @@ using OsiguranjeAspire.ApiService.Models;
 
 namespace OsiguranjeAspire.ApiService.Data
 {
-    public class InsuranceDbContext : DbContext
+    public class OsiguranjeContext : DbContext
     {
-        public InsuranceDbContext(DbContextOptions<InsuranceDbContext> opts) : base(opts){}
+        public OsiguranjeContext(DbContextOptions<OsiguranjeContext> opts) : base(opts){}
 
         public DbSet<Polisa> Polise => Set<Polisa>();
     }

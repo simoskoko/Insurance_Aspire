@@ -23,7 +23,7 @@ builder.Services.AddScoped(sp =>
 
 builder.AddServiceDefaults();          // registers health checks, OTEL, discovery, etc.
 
-builder.Services.AddDbContext<InsuranceDbContext>(options =>
+builder.Services.AddDbContext<OsiguranjeContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -65,7 +65,7 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 });
 
-app.MapGet("/polise", async (InsuranceDbContext db) =>
+app.MapGet("/api/polise", async (OsiguranjeContext db) =>
     await db.Polise
         .Select(p => new PolisaDTO
         {
