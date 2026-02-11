@@ -13,7 +13,7 @@ namespace OsiguranjeAspire.Web
 
             public async Task<List<PolisaDTO>> GetAllAsync()
             {
-                return await _client.GetFromJsonAsync<List<PolisaDTO>>("polise") ?? new();
+                return await _client.GetFromJsonAsync<List<PolisaDTO>>("api/polise") ?? new();
             }
     }
 }
