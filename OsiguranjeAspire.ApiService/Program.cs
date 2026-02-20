@@ -9,6 +9,7 @@ using OsiguranjeAspire.Contracts.Polise;
 using OsiguranjeAspire.Web;
 using OsiguranjeAspire.Web.Auth;
 using OsiguranjeAspire.Web.Components;
+using OsiguranjeAspire.Web.Components.Pages;
 using OsiguranjeAspire.Web.Services;
 using System.Net.Http.Headers;
 
@@ -81,6 +82,22 @@ app.MapGet("/api/polise", async (OsiguranjeContext db) =>
             DatumIsteka = p.DatumIsteka
             // map fields explicitly
         })
+        .ToListAsync());
+
+app.MapGet("/api/polise/zaposleni/{IdZaposlenog:int}",
+    async (int IdZaposlenog, OsiguranjeContext db) =>
+    {
+        var polise = await db.Polise
+        .Where(p => p.IdZaposlenog == IdZaposlenog).ToListAsync();
+
+        return Results.Ok(polise);
+    }
+);
+
+app.MapGet("/api/zaposleni/ids", async (OsiguranjeContext db) =>
+    await db.Polise
+        .Select(p => p.IdZaposlenog)
+        .Distinct()
         .ToListAsync());
 
 

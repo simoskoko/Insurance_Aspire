@@ -22,7 +22,7 @@ builder.Services.AddHttpClient<WeatherApiClient>(client =>
     }
 );
 
-builder.Services.AddHttpClient<PoliciesApiClient>(client =>
+builder.Services.AddHttpClient<PoliseApiClient>(client =>
 {
     client.BaseAddress = new("https+http://apiservice");
 });

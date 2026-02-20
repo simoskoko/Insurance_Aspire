@@ -1,31 +1,42 @@
 ﻿@page "/polise"
-@inject PoliciesApiClient PoliciesClient
+@inject PoliseApiClient PoliseClient
 @inject IHttpClientFactory ClientFactory
 @using OsiguranjeAspire.Contracts.Polise;
+@rendermode InteractiveServer
 
-<h3>Policies</h3>
+<h3>Polise</h3>
 
-@if (policies == null)
+@if (polise == null)
 {
     <p>Loading...</p>
 }
 else
 {
+    <label>Zaposleni:</label>
+    <select @bind="selectedId" @bind:after="OnSelectedChanged">
+        <option value="">Svi</option>
+        @foreach (var id in zaposleniIds)
+        {
+            <option value="@id">@id</option>
+        }
+    </select>
     <table class="table">
         <thead>
             <tr>
-                <th>Id</th>
-                <th>Policy Number</th>
-                <th>Premium</th>
+                <th>Broj polise</th>
+                <th>Nosilac Polise</th>
+                <th>Premija</th>
+                <th>IDZaposlenog</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var p in policies)
+            @foreach (var p in polise)
             {
                 <tr>
                     <td>@p.BrPolise</td>
                     <td>@p.ImeNosilac</td>
                     <td>@p.Premija</td>
+                    <td>@p.IdZaposlenog</td>
                 </tr>
             }
         </tbody>
@@ -33,11 +44,30 @@ else
 }
 
 @code {
-    private List<PolisaDTO>? policies;
+    private List<int> zaposleniIds = new();
+    private List<PolisaDTO> polise = new();
+    private int? selectedId;
+    private bool isLoading;
 
     protected override async Task OnInitializedAsync()
     {
-        var client = ClientFactory.CreateClient("api");
-        policies = await PoliciesClient.GetAllAsync();
+        isLoading = true;
+
+        zaposleniIds = await PoliseClient.GetZaposleniIds();
+        polise = await PoliseClient.GetAllAsync();
+
+        isLoading = false;
+    }
+
+    private async Task OnSelectedChanged()
+    {
+        isLoading = true;
+
+        if (selectedId is null)
+            polise = await PoliseClient.GetAllAsync(); // all
+        else
+            polise = await PoliseClient.GetByZaposleniAsync(selectedId.Value); // filtered
+
+        isLoading = false;
     }
 }

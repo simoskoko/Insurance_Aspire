@@ -16,5 +16,7 @@ namespace OsiguranjeAspire.Contracts.Polise
         public int VrstaPlacanjaId { get; set; }
         public DateTime DatumPocetka { get; set; }
         public DateTime DatumIsteka { get; set; }
+        public int IdZaposlenog { get; set; }
+
     }
 }
