@@ -6,6 +6,7 @@ using Microsoft.JSInterop;
 using OsiguranjeAspire.ApiService.Data;
 using OsiguranjeAspire.ApiService.Models;
 using OsiguranjeAspire.Contracts.Polise;
+using OsiguranjeAspire.Contracts.Zaposleni;
 using OsiguranjeAspire.Web;
 using OsiguranjeAspire.Web.Auth;
 using OsiguranjeAspire.Web.Components;
@@ -79,7 +80,8 @@ app.MapGet("/api/polise", async (OsiguranjeContext db) =>
             Premija = p.Premija,
             VrstaPlacanjaId = p.VrstaPlacanjaId,
             DatumPocetka = p.DatumPocetka,
-            DatumIsteka = p.DatumIsteka
+            DatumIsteka = p.DatumIsteka, 
+            IdZaposlenog = p.IdZaposlenog
             // map fields explicitly
         })
         .ToListAsync());
@@ -95,10 +97,21 @@ app.MapGet("/api/polise/zaposleni/{IdZaposlenog:int}",
 );
 
 app.MapGet("/api/zaposleni/ids", async (OsiguranjeContext db) =>
-    await db.Polise
-        .Select(p => p.IdZaposlenog)
+    await db.Zaposleni
+        .Select(p => p.ImePrezime)
         .Distinct()
         .ToListAsync());
+
+app.MapGet("/api/zaposleni", async (OsiguranjeContext db) =>
+{
+    return await db.Zaposleni
+        .Select(z => new ZaposleniDTO
+        {
+            Id = z.Id,
+            ImePrezime = z.ImePrezime
+        })
+        .ToListAsync();
+});
 
 
 app.Run();

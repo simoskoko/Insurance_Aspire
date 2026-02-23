@@ -20,9 +20,6 @@ namespace OsiguranjeAspire.Web
         {
             return await _client.GetFromJsonAsync<List<PolisaDTO>>($"api/polise/zaposleni/{idZaposlenog}") ?? new();
         }
-
-        public async Task<List<int>> GetZaposleniIds()
-        => await _client.GetFromJsonAsync<List<int>>("api/zaposleni/ids") ?? new();
     }
 }
   
