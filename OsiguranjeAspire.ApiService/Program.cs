@@ -113,5 +113,7 @@ app.MapGet("/api/zaposleni", async (OsiguranjeContext db) =>
         .ToListAsync();
 });
 
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.Run();
