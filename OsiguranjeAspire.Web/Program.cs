@@ -31,6 +31,8 @@ builder.Services.AddHttpClient<ZaposleniApiClient>(client =>
 //auth servis
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie();
 builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationCore();
+builder.Services.AddCascadingAuthenticationState();
 
 var app = builder.Build();
 if (!app.Environment.IsDevelopment())
