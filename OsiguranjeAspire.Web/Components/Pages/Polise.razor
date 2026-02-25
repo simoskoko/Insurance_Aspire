@@ -2,8 +2,11 @@
 @inject PoliseApiClient PoliseClient
 @inject ZaposleniApiClient ZaposleniClient
 @inject IHttpClientFactory ClientFactory
+@inject AuthenticationStateProvider AuthProvider
 @using OsiguranjeAspire.Contracts.Polise;
 @using OsiguranjeAspire.Contracts.Zaposleni;
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @rendermode InteractiveServer
 
 <h3>Polise</h3>
@@ -48,17 +51,31 @@ else
 @code {
     private List<ZaposleniDTO> zaposleni = new();
     private List<PolisaDTO> polise = new();
-    private int? selectedId;
     private bool isLoading;
 
     protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
 
-        zaposleni = await ZaposleniClient.GetZaposleni();
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        var idClaim = user.FindFirst("id")?.Value;
+
+        if (!int.TryParse(idClaim, out var currentUserId))
+            return;
+
+        // Load only employees whose NadredjeniId == current user id
+        zaposleni = await ZaposleniClient.GetPodredjeniAsync(currentUserId);
+
+        // Optionally load all policies at start
         polise = await PoliseClient.GetAllAsync();
 
-        isLoading = false;
+        // isLoading = true;
+
+        // zaposleni = await ZaposleniClient.GetZaposleni();
+        // polise = await PoliseClient.GetAllAsync();
+
+        // isLoading = false;
     }
 
     private async Task OnSelectedChanged(ChangeEventArgs e)

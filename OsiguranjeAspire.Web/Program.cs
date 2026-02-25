@@ -45,8 +45,6 @@ if (!app.Environment.IsDevelopment())
 //baca 404 na / ...logicno
 app.MapGet("/", () => Results.Redirect("/home"));
 
-/////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
 app.MapGet("/auth/callback", async (HttpContext ctx) =>
 {
     const string secret = "aaanetsecret";
@@ -133,8 +131,6 @@ static string B64UrlEncode(byte[] bytes)
     return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
 
-/////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

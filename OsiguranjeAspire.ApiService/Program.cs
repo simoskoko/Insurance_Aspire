@@ -113,6 +113,18 @@ app.MapGet("/api/zaposleni", async (OsiguranjeContext db) =>
         .ToListAsync();
 });
 
+app.MapGet("/api/zaposleni/podredjeni/{nadredjeniId:int}", async (int nadredjeniId, OsiguranjeContext db) =>
+{
+    return await db.Zaposleni
+        .Where(z => z.NadredjeniId == nadredjeniId)
+        .Select(z => new ZaposleniDTO //realno pametnije napraviti poseban DTO za ovu rutu da se ne salje i pw pri punjenju dropdowna, ali ajde
+        {
+            Id = z.Id,
+            ImePrezime = z.ImePrezime
+        })
+        .ToListAsync();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 
