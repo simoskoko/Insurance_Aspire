@@ -1,139 +1,112 @@
-﻿@page "/login"
-@using System.Net.Http.Json
-@using OsiguranjeAspire.Contracts.Korisnik
-@inject HttpClient Http
-@inject NavigationManager Nav
-@inject IJSRuntime JS
+@page "/login"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 
 <PageTitle>Prijava</PageTitle>
-<div class="login-page">
-    <div class="login-card">
-        <h1>Prijava</h1>
 
-        <div class="form-group">
-            <label for="username">Korisničko ime</label>
-            <input id="username" class="form-control" @bind="model.Username" />
+<div class="login-shell">
+    <section class="login-panel" aria-labelledby="login-title">
+        <div class="login-header">
+            <p>ITSOsiguranje</p>
+            <h1 id="login-title">Prijava</h1>
         </div>
 
-        <div class="form-group">
-            <label for="password">Lozinka</label>
-            <input id="password" class="form-control" type="password" @bind="model.Password" />
-        </div>
-
-        <button class="btn btn-primary login-btn" @onclick="LoginAsync" disabled="@isLoading">
-            @(isLoading ? "Prijava..." : "Prijavi se")
-        </button>
-
-        @if (!string.IsNullOrWhiteSpace(error))
+        @if (showError)
         {
-            <div class="login-error">@error</div>
+            <div class="alert alert-danger" role="alert">
+                Pogrešno korisničko ime ili lozinka.
+            </div>
         }
-    </div>
+
+        <form method="post" action="/auth/login" autocomplete="on">
+            <div class="mb-3">
+                <label class="form-label" for="username">Korisničko ime</label>
+                <input id="username"
+                       name="username"
+                       class="form-control"
+                       autocomplete="username"
+                       required
+                       autofocus />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label" for="password">Lozinka</label>
+                <input id="password"
+                       name="password"
+                       class="form-control"
+                       type="password"
+                       autocomplete="current-password"
+                       required />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Prijavi se</button>
+        </form>
+    </section>
 </div>
 
 <style>
-    .login-page {
+    .login-shell {
         min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        display: grid;
+        place-items: center;
         padding: 24px;
+        background: #f4f6f8;
     }
 
-    .login-card {
-        width: 100%;
-        max-width: 460px;
-        background: white;
+    .login-panel {
+        width: min(100%, 420px);
         padding: 32px;
-        border-radius: 14px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        background: #fff;
+        border: 1px solid #dfe3e8;
+        border-radius: 8px;
+        box-shadow: 0 16px 36px rgba(31, 41, 55, 0.08);
     }
 
-        .login-card h1 {
-            margin-bottom: 24px;
-            font-size: 2rem;
-            font-weight: 600;
-            text-align: center;
-        }
-
-    .form-group {
-        margin-bottom: 18px;
+    .login-header {
+        margin-bottom: 24px;
     }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
+    .login-header p {
+        margin: 0 0 4px;
+        color: #8b1e1e;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+
+    .login-header h1 {
+        margin: 0;
+        color: #202428;
+        font-size: 1.75rem;
+        font-weight: 650;
+    }
+
+    .form-label {
+        color: #33383f;
+        font-weight: 600;
+    }
 
     .form-control {
-        width: 100%;
-        height: 44px;
-        padding: 10px 12px;
-        border: 1px solid #ced4da;
-        border-radius: 8px;
-        font-size: 1rem;
-        box-sizing: border-box;
+        min-height: 44px;
+        border-radius: 6px;
     }
 
-    .login-btn {
-        width: 100%;
-        height: 44px;
-        margin-top: 8px;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        background-color: darkred;
+    .btn-primary {
+        min-height: 44px;
+        background-color: #8b1e1e;
+        border-color: #8b1e1e;
+        border-radius: 6px;
+        font-weight: 700;
     }
 
-    .login-error {
-        margin-top: 16px;
-        padding: 10px 12px;
-        border-radius: 8px;
-        background-color: #f8d7da;
-        color: #842029;
-        font-size: 0.95rem;
+    .btn-primary:hover,
+    .btn-primary:focus {
+        background-color: #731818;
+        border-color: #731818;
     }
 </style>
 
 @code {
-    private LoginRequestDto model = new();
-    private bool isLoading;
-    private string? error;
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
 
-    private async Task LoginAsync()
-    {
-        error = null;
-        isLoading = true;
-
-        try
-        {
-            var response = await Http.PostAsJsonAsync("auth/login", model);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                error = "Pogrešno korisničko ime ili lozinka.";
-                return;
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
-
-            if (result is null || string.IsNullOrWhiteSpace(result.Token))
-            {
-                error = "Token nije vraćen.";
-                return;
-            }
-
-            await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
-            Nav.NavigateTo("/");
-        }
-        catch
-        {
-            error = "Greška pri prijavi.";
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
+    private bool showError => Error == "1";
 }
