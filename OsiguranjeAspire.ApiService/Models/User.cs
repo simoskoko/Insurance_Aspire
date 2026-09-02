@@ -3,16 +3,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OsiguranjeAspire.ApiService.Models;
 
-[Table("Users")]
+[Table("Korisnici")]
 public class User
 {
     [Key]
-    [Column("id")]
-    public Guid Id { get; set; }
+    [Column("Username")]
+    public string? Username { get; set; }
 
-    [Column("email")]
-    public string? Email { get; set; }
-
-    [Column("passwordHash")]
+    [Column("Password")]
     public string? Password { get; set; }
 }

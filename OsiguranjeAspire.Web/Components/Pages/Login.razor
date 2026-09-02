@@ -1,5 +1,6 @@
 @page "/login"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@rendermode InteractiveServer
 
 <PageTitle>Prijava</PageTitle>
 
@@ -17,12 +18,12 @@
             </div>
         }
 
-        <form method="post" action="/auth/login" autocomplete="on">
+        <form @onsubmit="HandleSubmit" @onsubmit:preventDefault="true" autocomplete="on">
             <div class="mb-3">
                 <label class="form-label" for="username">Korisničko ime</label>
                 <input id="username"
-                       name="username"
                        class="form-control"
+                       @bind="username"
                        autocomplete="username"
                        required
                        autofocus />
@@ -31,14 +32,21 @@
             <div class="mb-4">
                 <label class="form-label" for="password">Lozinka</label>
                 <input id="password"
-                       name="password"
                        class="form-control"
                        type="password"
+                       @bind="password"
                        autocomplete="current-password"
                        required />
             </div>
 
             <button type="submit" class="btn btn-primary w-100">Prijavi se</button>
+
+            @if (isLocalhost)
+            {
+                <button type="button" class="btn btn-secondary w-100 mt-3" @onclick="HandleLocalBypass">
+                    Dev: Bypass Login (Localhost)
+                </button>
+            }
         </form>
     </section>
 </div>
@@ -102,11 +110,88 @@
         background-color: #731818;
         border-color: #731818;
     }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+
+    .btn-secondary:hover,
+    .btn-secondary:focus {
+        background-color: #5a6268;
+        border-color: #545b62;
+    }
+
+    .mt-3 {
+        margin-top: 1rem;
+    }
 </style>
 
 @code {
     [SupplyParameterFromQuery(Name = "error")]
     public string? Error { get; set; }
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private bool loginFailed;
+    private bool isLocalhost;
 
-    private bool showError => Error == "1";
+    private bool showError => Error == "1" || loginFailed;
+
+    [Microsoft.AspNetCore.Components.Inject]
+    private OsiguranjeAspire.Web.Services.AuthApi? auth { get; set; }
+
+    [Microsoft.AspNetCore.Components.Inject]
+    private Microsoft.AspNetCore.Components.NavigationManager? Navigation { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (Navigation != null)
+        {
+            var uri = new Uri(Navigation.Uri);
+            isLocalhost = uri.Host == "localhost" || uri.Host == "127.0.0.1" || uri.Host.StartsWith("localhost:");
+        }
+    }
+
+    private async System.Threading.Tasks.Task HandleSubmit()
+    {
+        loginFailed = false;
+        if (auth is null || Navigation is null)
+        {
+            loginFailed = true;
+            return;
+        }
+
+        var result = await auth.LoginAsync(username, password);
+        if (string.IsNullOrWhiteSpace(result))
+        {
+            loginFailed = true;
+            return;
+        }
+
+        // Cookie is set server-side by the auth endpoint, just navigate
+        Navigation.NavigateTo("/home", true);
+    }
+
+    private async System.Threading.Tasks.Task HandleLocalBypass()
+    {
+        loginFailed = false;
+        if (auth is null || Navigation is null)
+        {
+            loginFailed = true;
+            return;
+        }
+
+        // Use credentials from the form
+        var result = await auth.LoginAsync(username, password);
+        if (string.IsNullOrWhiteSpace(result))
+        {
+            loginFailed = true;
+            return;
+        }
+
+        Navigation.NavigateTo("/home", true);
+    }
 }

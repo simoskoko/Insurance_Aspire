@@ -12,5 +12,7 @@ namespace OsiguranjeAspire.ApiService.Data
         public DbSet<Polisa> Polise => Set<Polisa>();
 
         public DbSet<Zaposleni> Zaposleni => Set<Zaposleni>();
+
+        public DbSet<User> Users => Set<User>();
     }
 }

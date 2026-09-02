@@ -1,3 +1,4 @@
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 // keep ServiceDefaults if referenced; if not, remove the two lines that mention it
@@ -38,7 +39,11 @@ builder.Services.AddProblemDetails(); // no options for older
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(); // or AddInteractiveWebAssemblyComponents() if that�s your setup
+    .AddInteractiveServerComponents(); // or AddInteractiveWebAssemblyComponents() if that’s your setup
+
+// Add authentication for cookies
+builder.Services.AddAuthentication("Cookies")
+    .AddCookie("Cookies");
 
 var app = builder.Build();
 
@@ -46,6 +51,9 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage(); // shows full stack traces in dev
 else
     app.UseExceptionHandler();   // generic problem details in prod
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapDefaultEndpoints();
 app.MapRazorComponents<App>()
@@ -125,7 +133,47 @@ app.MapGet("/api/zaposleni/podredjeni/{nadredjeniId:int}", async (int nadredjeni
         .ToListAsync();
 });
 
+app.MapPost("/api/auth/login", async (AuthLoginRequest request, HttpContext ctx, OsiguranjeContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+    {
+        Console.WriteLine("Login failed: empty username or password");
+        return Results.Unauthorized();
+    }
+
+    // Validate credentials against the Users database
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+
+    if (user == null)
+    {
+        Console.WriteLine($"Login failed: user '{request.Username}' not found in database");
+        return Results.Unauthorized();
+    }
+
+    if (user.Password != request.Password)
+    {
+        Console.WriteLine($"Login failed: password mismatch for user '{request.Username}'");
+        return Results.Unauthorized();
+    }
+
+    Console.WriteLine($"Login successful for user '{request.Username}'");
+
+    var claims = new List<System.Security.Claims.Claim>
+    {
+        new("username", request.Username),
+    };
+
+    var identity = new System.Security.Claims.ClaimsIdentity(claims, "Cookies");
+    var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+
+    await ctx.SignInAsync("Cookies", principal);
+
+    return Results.Ok(new { username = request.Username });
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.Run();
+
+record AuthLoginRequest(string Username, string Password);
