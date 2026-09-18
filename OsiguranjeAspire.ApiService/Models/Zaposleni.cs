@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OsiguranjeAspire.ApiService.Models
 {
+    [Table("Korisnici")]
     public class Zaposleni
     {
         [Key]

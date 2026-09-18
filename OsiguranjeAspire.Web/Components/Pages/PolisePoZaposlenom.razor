@@ -1,4 +1,4 @@
-﻿@page "/polisePoZaposlenom"
+﻿@page "/polisepozaposlenom"
 @inject PoliseApiClient PoliseClient
 @inject IHttpClientFactory ClientFactory
 @using OsiguranjeAspire.Contracts.Polise;
@@ -27,7 +27,7 @@ else
             @foreach (var p in policies)
             {
                 <tr>
-                    <td>@p.BrPolise</td>
+                    <td><a href="pregledpolise/@p.BrPolise">@p.BrPolise</a></td>
                     <td>@p.ImeNosilac</td>
                     <td>@p.Premija</td>
                     <td>@p.IdZaposlenog</td>

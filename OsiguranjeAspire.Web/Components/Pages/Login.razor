@@ -1,6 +1,7 @@
 @page "/login"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @rendermode InteractiveServer
+@using OsiguranjeAspire.Web.Auth
 
 <PageTitle>Prijava</PageTitle>
 
@@ -146,6 +147,9 @@
     [Microsoft.AspNetCore.Components.Inject]
     private Microsoft.AspNetCore.Components.NavigationManager? Navigation { get; set; }
 
+    [Microsoft.AspNetCore.Components.Inject]
+    private Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider? AuthStateProvider { get; set; }
+
     protected override void OnInitialized()
     {
         if (Navigation != null)
@@ -165,14 +169,16 @@
         }
 
         var result = await auth.LoginAsync(username, password);
-        if (string.IsNullOrWhiteSpace(result))
+        if (result is null)
         {
             loginFailed = true;
             return;
         }
 
-        // Cookie is set server-side by the auth endpoint, just navigate
-        Navigation.NavigateTo("/home", true);
+        if (AuthStateProvider is SessionAuthenticationStateProvider session)
+            session.SetUser(result.username, result.roleId, result.id);
+
+        Navigation.NavigateTo("/home");
     }
 
     private async System.Threading.Tasks.Task HandleLocalBypass()
@@ -186,12 +192,15 @@
 
         // Use credentials from the form
         var result = await auth.LoginAsync(username, password);
-        if (string.IsNullOrWhiteSpace(result))
+        if (result is null)
         {
             loginFailed = true;
             return;
         }
 
-        Navigation.NavigateTo("/home", true);
+        if (AuthStateProvider is SessionAuthenticationStateProvider session)
+            session.SetUser(result.username, result.roleId, result.id);
+
+        Navigation.NavigateTo("/home");
     }
 }

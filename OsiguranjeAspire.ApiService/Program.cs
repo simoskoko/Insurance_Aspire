@@ -7,7 +7,7 @@ using Microsoft.JSInterop;
 using OsiguranjeAspire.ApiService.Data;
 using OsiguranjeAspire.ApiService.Models;
 using OsiguranjeAspire.Contracts.Polise;
-using OsiguranjeAspire.Contracts.Zaposleni;
+using OsiguranjeAspire.Contracts.Korisnici;
 using OsiguranjeAspire.Web;
 using OsiguranjeAspire.Web.Auth;
 using OsiguranjeAspire.Web.Components;
@@ -94,6 +94,93 @@ app.MapGet("/api/polise", async (OsiguranjeContext db) =>
         })
         .ToListAsync());
 
+async Task<Zaposleni?> GetCurrentEmployee(HttpContext context, OsiguranjeContext db)
+{
+    var username = context.User.FindFirst("username")?.Value
+        ?? context.Request.Headers["X-Username"].FirstOrDefault();
+
+    return string.IsNullOrWhiteSpace(username)
+        ? null
+        : await db.Zaposleni.FirstOrDefaultAsync(z => z.Username == username);
+}
+
+app.MapGet("/api/polise/{brPolise:int}", async (int brPolise, HttpContext context, OsiguranjeContext db) =>
+{
+    var employee = await GetCurrentEmployee(context, db);
+    if (employee is null)
+        return Results.Unauthorized();
+
+    var polisa = await db.Polise
+        .Where(p => p.BrPolise == brPolise)
+        .Select(p => new PolisaDTO
+        {
+            BrPolise = p.BrPolise,
+            ImeNosilac = p.ImeNosilac,
+            JMBGNosilac = p.JMBGNosilac,
+            TipNosilac = p.TipNosilac,
+            VrstaId = p.VrstaId,
+            LOBId = p.LOBId,
+            Premija = p.Premija,
+            VrstaPlacanjaId = p.VrstaPlacanjaId,
+            DatumPocetka = p.DatumPocetka,
+            DatumIsteka = p.DatumIsteka,
+            IdZaposlenog = p.IdZaposlenog
+        })
+        .SingleOrDefaultAsync();
+
+    return polisa is null ? Results.NotFound() : Results.Ok(polisa);
+});
+
+app.MapPut("/api/polise/{brPolise:int}", async (int brPolise, PolisaDTO request, HttpContext context, OsiguranjeContext db) =>
+{
+    var employee = await GetCurrentEmployee(context, db);
+    if (employee is null)
+        return Results.Unauthorized();
+
+    if (request.BrPolise != brPolise)
+        return Results.BadRequest("Broj polise ne odgovara adresi zahteva.");
+
+    if (request.DatumIsteka < request.DatumPocetka)
+        return Results.BadRequest("Datum isteka mora biti nakon datuma početka.");
+
+    var polisa = await db.Polise.SingleOrDefaultAsync(p => p.BrPolise == brPolise);
+    if (polisa is null)
+        return Results.NotFound();
+
+    var canEdit = employee.RoleId == 1 ||
+        (employee.RoleId == 3 && employee.Id == polisa.IdZaposlenog);
+    if (!canEdit)
+        return Results.Forbid();
+
+    polisa.JMBGNosilac = request.JMBGNosilac;
+    polisa.ImeNosilac = request.ImeNosilac;
+    polisa.TipNosilac = request.TipNosilac;
+    polisa.VrstaId = request.VrstaId;
+    polisa.LOBId = request.LOBId;
+    polisa.Premija = request.Premija;
+    polisa.VrstaPlacanjaId = request.VrstaPlacanjaId;
+    polisa.DatumPocetka = request.DatumPocetka;
+    polisa.DatumIsteka = request.DatumIsteka;
+    polisa.IdZaposlenog = request.IdZaposlenog;
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new PolisaDTO
+    {
+        BrPolise = polisa.BrPolise,
+        JMBGNosilac = polisa.JMBGNosilac,
+        ImeNosilac = polisa.ImeNosilac,
+        TipNosilac = polisa.TipNosilac,
+        VrstaId = polisa.VrstaId,
+        LOBId = polisa.LOBId,
+        Premija = polisa.Premija,
+        VrstaPlacanjaId = polisa.VrstaPlacanjaId,
+        DatumPocetka = polisa.DatumPocetka,
+        DatumIsteka = polisa.DatumIsteka,
+        IdZaposlenog = polisa.IdZaposlenog
+    });
+});
+
 app.MapGet("/api/polise/zaposleni/{IdZaposlenog:int}",
     async (int IdZaposlenog, OsiguranjeContext db) =>
     {
@@ -104,16 +191,16 @@ app.MapGet("/api/polise/zaposleni/{IdZaposlenog:int}",
     }
 );
 
-app.MapGet("/api/zaposleni/ids", async (OsiguranjeContext db) =>
+app.MapGet("/api/korisnici/ids", async (OsiguranjeContext db) =>
     await db.Zaposleni
         .Select(p => p.ImePrezime)
         .Distinct()
         .ToListAsync());
 
-app.MapGet("/api/zaposleni", async (OsiguranjeContext db) =>
+app.MapGet("/api/korisnici", async (OsiguranjeContext db) =>
 {
     return await db.Zaposleni
-        .Select(z => new ZaposleniDTO
+        .Select(z => new KorisnikDTO
         {
             Id = z.Id,
             ImePrezime = z.ImePrezime
@@ -121,11 +208,11 @@ app.MapGet("/api/zaposleni", async (OsiguranjeContext db) =>
         .ToListAsync();
 });
 
-app.MapGet("/api/zaposleni/podredjeni/{nadredjeniId:int}", async (int nadredjeniId, OsiguranjeContext db) =>
+app.MapGet("/api/korisnici/podredjeni/{nadredjeniId:int}", async (int nadredjeniId, OsiguranjeContext db) =>
 {
     return await db.Zaposleni
         .Where(z => z.NadredjeniId == nadredjeniId)
-        .Select(z => new ZaposleniDTO //realno pametnije napraviti poseban DTO za ovu rutu da se ne salje i pw pri punjenju dropdowna, ali ajde
+        .Select(z => new KorisnikDTO //realno pametnije napraviti poseban DTO za ovu rutu da se ne salje i pw pri punjenju dropdowna, ali ajde
         {
             Id = z.Id,
             ImePrezime = z.ImePrezime
@@ -141,16 +228,18 @@ app.MapPost("/api/auth/login", async (AuthLoginRequest request, HttpContext ctx,
         return Results.Unauthorized();
     }
 
-    // Validate credentials against the Users database
-    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+    // Validate credentials against the Korisnici database table.
+    var employee = await db.Zaposleni
+        .AsNoTracking()
+        .FirstOrDefaultAsync(z => z.Username == request.Username);
 
-    if (user == null)
+    if (employee is null)
     {
         Console.WriteLine($"Login failed: user '{request.Username}' not found in database");
         return Results.Unauthorized();
     }
 
-    if (user.Password != request.Password)
+    if (employee.Password != request.Password)
     {
         Console.WriteLine($"Login failed: password mismatch for user '{request.Username}'");
         return Results.Unauthorized();
@@ -161,6 +250,8 @@ app.MapPost("/api/auth/login", async (AuthLoginRequest request, HttpContext ctx,
     var claims = new List<System.Security.Claims.Claim>
     {
         new("username", request.Username),
+        new("roleId", (employee?.RoleId ?? 0).ToString()),
+        new("id", (employee?.Id ?? 0).ToString())
     };
 
     var identity = new System.Security.Claims.ClaimsIdentity(claims, "Cookies");
@@ -168,7 +259,12 @@ app.MapPost("/api/auth/login", async (AuthLoginRequest request, HttpContext ctx,
 
     await ctx.SignInAsync("Cookies", principal);
 
-    return Results.Ok(new { username = request.Username });
+    return Results.Ok(new
+    {
+        username = request.Username,
+        roleId = employee?.RoleId,
+        id = employee?.Id
+    });
 });
 
 app.UseAuthentication();

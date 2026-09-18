@@ -1,8 +1,10 @@
 using OsiguranjeAspire.Web;
 using OsiguranjeAspire.Web.Components;
 using OsiguranjeAspire.Web.Services;
+using OsiguranjeAspire.Web.Auth;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Components.Authorization;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,9 +34,11 @@ builder.Services.AddHttpClient<AuthApi>(client =>
 });
 
 //auth servis
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie();
+ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie();
 builder.Services.AddAuthorization();
 builder.Services.AddAuthorizationCore();
+ builder.Services.AddScoped<SessionAuthenticationStateProvider>();
+ builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<SessionAuthenticationStateProvider>());
 builder.Services.AddCascadingAuthenticationState();
 
 var app = builder.Build();

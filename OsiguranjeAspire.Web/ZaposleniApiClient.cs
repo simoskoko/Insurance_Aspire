@@ -1,4 +1,4 @@
-﻿using OsiguranjeAspire.Contracts.Zaposleni;
+﻿using OsiguranjeAspire.Contracts.Korisnici;
 
 namespace OsiguranjeAspire.Web
 {
@@ -11,13 +11,13 @@ namespace OsiguranjeAspire.Web
             _client = client;
         }
 
-        public async Task<List<ZaposleniDTO>> GetZaposleni()
-    => await _client.GetFromJsonAsync<List<ZaposleniDTO>>("api/zaposleni") ?? new();
+        public async Task<List<KorisnikDTO>> GetZaposleni()
+    => await _client.GetFromJsonAsync<List<KorisnikDTO>>("api/korisnici") ?? new();
 
-        public async Task<List<ZaposleniDTO>> GetPodredjeniAsync(int nadredjeniId)
+        public async Task<List<KorisnikDTO>> GetPodredjeniAsync(int nadredjeniId)
         {
-            return await _client.GetFromJsonAsync<List<ZaposleniDTO>>(
-                $"api/zaposleni/podredjeni/{nadredjeniId}"
+            return await _client.GetFromJsonAsync<List<KorisnikDTO>>(
+                $"api/korisnici/podredjeni/{nadredjeniId}"
             ) ?? new();
         }
     }

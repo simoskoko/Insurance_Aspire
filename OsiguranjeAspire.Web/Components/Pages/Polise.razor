@@ -4,7 +4,7 @@
 @inject IHttpClientFactory ClientFactory
 @inject AuthenticationStateProvider AuthProvider
 @using OsiguranjeAspire.Contracts.Polise;
-@using OsiguranjeAspire.Contracts.Zaposleni;
+@using OsiguranjeAspire.Contracts.Korisnici;
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @rendermode InteractiveServer
@@ -17,12 +17,12 @@
 }
 else
 {
-    <label>Zaposleni:</label>
+    <label>Korisnici:</label>
     <select @onchange="OnSelectedChanged">
         <option value="">-- All --</option>
-        @foreach (var z in zaposleni)
+        @foreach (var korisnik in korisnici)
         {
-            <option value="@z.Id">@z.ImePrezime</option>
+            <option value="@korisnik.Id">@korisnik.ImePrezime</option>
         }
     </select>
     <table class="table">
@@ -38,7 +38,7 @@ else
             @foreach (var p in polise)
             {
                 <tr>
-                    <td>@p.BrPolise</td>
+                    <td><a href="pregledpolise/@p.BrPolise">@p.BrPolise</a></td>
                     <td>@p.ImeNosilac</td>
                     <td>@p.Premija</td>
                     <td>@p.IdZaposlenog</td>
@@ -49,7 +49,7 @@ else
 }
 
 @code {
-    private List<ZaposleniDTO> zaposleni = new();
+    private List<KorisnikDTO> korisnici = new();
     private List<PolisaDTO> polise = new();
     private bool isLoading;
 
@@ -64,15 +64,15 @@ else
         if (!int.TryParse(idClaim, out var currentUserId))
             return;
 
-        // Load only employees whose NadredjeniId == current user id
-        zaposleni = await ZaposleniClient.GetPodredjeniAsync(currentUserId);
+        // Load only users whose NadredjeniId == current user id
+        korisnici = await ZaposleniClient.GetPodredjeniAsync(currentUserId);
 
         // Optionally load all policies at start
         polise = await PoliseClient.GetAllAsync();
 
         // isLoading = true;
 
-        // zaposleni = await ZaposleniClient.GetZaposleni();
+        // korisnici = await ZaposleniClient.GetZaposleni();
         // polise = await PoliseClient.GetAllAsync();
 
         // isLoading = false;

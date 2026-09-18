@@ -1,0 +1,234 @@
+@page "/pregledpolise/{BrPolise:int}"
+@rendermode InteractiveServer
+@using System.Net
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using OsiguranjeAspire.Contracts.Polise
+@inject PoliseApiClient PoliseClient
+@inject AuthenticationStateProvider AuthProvider
+
+<PageTitle>Pregled polise</PageTitle>
+
+<h3>Pregled polise</h3>
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+else if (policy is not null)
+{
+    <EditForm Model="editPolicy" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+        @if (!string.IsNullOrWhiteSpace(validationError))
+        {
+            <div class="alert alert-danger" role="alert">@validationError</div>
+        }
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Broj polise</label>
+                <input class="form-control" value="@policy.BrPolise" readonly />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">JMBG nosioca</label>
+                @if (isEditing) { <InputText class="form-control" @bind-Value="editPolicy.JMBGNosilac" /> } else { <p class="form-control-plaintext">@policy.JMBGNosilac</p> }
+                <ValidationMessage For="@(() => editPolicy.JMBGNosilac)" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Ime nosioca</label>
+                @if (isEditing) { <InputText class="form-control" @bind-Value="editPolicy.ImeNosilac" /> } else { <p class="form-control-plaintext">@policy.ImeNosilac</p> }
+                <ValidationMessage For="@(() => editPolicy.ImeNosilac)" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Tip nosioca</label>
+                @if (isEditing) { <InputText class="form-control" @bind-Value="editPolicy.TipNosilac" /> } else { <p class="form-control-plaintext">@policy.TipNosilac</p> }
+                <ValidationMessage For="@(() => editPolicy.TipNosilac)" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Vrsta ID</label>
+                @if (isEditing) { <InputNumber class="form-control" @bind-Value="editPolicy.VrstaId" /> } else { <p class="form-control-plaintext">@policy.VrstaId</p> }
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">LOB ID</label>
+                @if (isEditing) { <InputNumber class="form-control" @bind-Value="editPolicy.LOBId" /> } else { <p class="form-control-plaintext">@policy.LOBId</p> }
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Premija</label>
+                @if (isEditing) { <InputNumber class="form-control" @bind-Value="editPolicy.Premija" /> } else { <p class="form-control-plaintext">@policy.Premija</p> }
+                <ValidationMessage For="@(() => editPolicy.Premija)" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Vrsta plaćanja ID</label>
+                @if (isEditing) { <InputNumber class="form-control" @bind-Value="editPolicy.VrstaPlacanjaId" /> } else { <p class="form-control-plaintext">@policy.VrstaPlacanjaId</p> }
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Datum početka</label>
+                @if (isEditing) { <InputDate class="form-control" @bind-Value="editPolicy.DatumPocetka" /> } else { <p class="form-control-plaintext">@policy.DatumPocetka.ToShortDateString()</p> }
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Datum isteka</label>
+                @if (isEditing) { <InputDate class="form-control" @bind-Value="editPolicy.DatumIsteka" /> } else { <p class="form-control-plaintext">@policy.DatumIsteka.ToShortDateString()</p> }
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">ID zaposlenog</label>
+                @if (isEditing) { <InputNumber class="form-control" @bind-Value="editPolicy.IdZaposlenog" /> } else { <p class="form-control-plaintext">@policy.IdZaposlenog</p> }
+            </div>
+        </div>
+
+        <div class="mt-4">
+            @if (isEditing)
+            {
+                <button type="submit" class="btn btn-primary" disabled="@isSaving">Save</button>
+                <button type="button" class="btn btn-secondary ms-2" @onclick="CancelEdit" disabled="@isSaving">Cancel</button>
+            }
+            else if (canEdit)
+            {
+                <button type="button" class="btn btn-primary" @onclick="BeginEdit">Edit</button>
+            }
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int BrPolise { get; set; }
+
+    private PolisaDTO? policy;
+    private PolisaDTO editPolicy = new();
+    private bool isLoading = true;
+    private bool isEditing;
+    private bool isSaving;
+    private bool canEdit;
+    private string? errorMessage;
+    private string? validationError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        validationError = null;
+        isEditing = false;
+
+        try
+        {
+            policy = await PoliseClient.GetAsync(BrPolise);
+            editPolicy = Copy(policy);
+
+            var user = (await AuthProvider.GetAuthenticationStateAsync()).User;
+            canEdit = IsAllowedToEdit(user, policy);
+        }
+        catch (PoliseApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            policy = null;
+            errorMessage = "Polisa nije pronađena.";
+        }
+        catch (PoliseApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            policy = null;
+            errorMessage = "Niste autorizovani za pregled ove polise.";
+        }
+        catch (Exception)
+        {
+            policy = null;
+            errorMessage = "Došlo je do greške pri učitavanju polise.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void BeginEdit()
+    {
+        if (policy is null || !canEdit)
+            return;
+
+        validationError = null;
+        editPolicy = Copy(policy);
+        isEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        if (policy is null)
+            return;
+
+        validationError = null;
+        editPolicy = Copy(policy);
+        isEditing = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (policy is null || !canEdit)
+            return;
+
+        validationError = null;
+        if (editPolicy.DatumIsteka < editPolicy.DatumPocetka)
+        {
+            validationError = "Datum isteka mora biti nakon datuma početka.";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var saved = await PoliseClient.UpdateAsync(editPolicy);
+            policy = saved;
+            editPolicy = Copy(saved);
+            isEditing = false;
+        }
+        catch (PoliseApiException ex) when (ex.StatusCode == HttpStatusCode.BadRequest)
+        {
+            validationError = "Podaci nisu validni. Proverite unete vrednosti.";
+        }
+        catch (PoliseApiException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            errorMessage = "Nemate pravo da izmenite ovu polisu.";
+            isEditing = false;
+        }
+        catch (PoliseApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            errorMessage = "Niste autorizovani za izmenu ove polise.";
+            isEditing = false;
+        }
+        catch (Exception)
+        {
+            validationError = "Došlo je do greške pri čuvanju polise.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static bool IsAllowedToEdit(ClaimsPrincipal user, PolisaDTO loadedPolicy)
+    {
+        var roleId = user.FindFirst("roleId")?.Value;
+        if (roleId == "1")
+            return true;
+
+        return roleId == "3" &&
+            int.TryParse(user.FindFirst("id")?.Value, out var employeeId) &&
+            employeeId == loadedPolicy.IdZaposlenog;
+    }
+
+    private static PolisaDTO Copy(PolisaDTO source) => new()
+    {
+        BrPolise = source.BrPolise,
+        JMBGNosilac = source.JMBGNosilac,
+        ImeNosilac = source.ImeNosilac,
+        TipNosilac = source.TipNosilac,
+        VrstaId = source.VrstaId,
+        LOBId = source.LOBId,
+        Premija = source.Premija,
+        VrstaPlacanjaId = source.VrstaPlacanjaId,
+        DatumPocetka = source.DatumPocetka,
+        DatumIsteka = source.DatumIsteka,
+        IdZaposlenog = source.IdZaposlenog
+    };
+}
