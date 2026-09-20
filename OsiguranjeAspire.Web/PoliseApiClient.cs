@@ -50,6 +50,16 @@ namespace OsiguranjeAspire.Web
                 ?? throw new InvalidOperationException("API nije vratila ažuriranu polisu.");
         }
 
+        public async Task<PolisaDTO> CreateAsync(PolisaDTO polisa)
+        {
+            using var request = await CreateRequestAsync(HttpMethod.Post, "api/polise");
+            request.Content = JsonContent.Create(polisa);
+            using var response = await _client.SendAsync(request);
+            await EnsureSuccessAsync(response);
+            return await response.Content.ReadFromJsonAsync<PolisaDTO>()
+                ?? throw new InvalidOperationException("API nije vratila kreiranu polisu.");
+        }
+
         private async Task<HttpRequestMessage> CreateRequestAsync(HttpMethod method, string uri)
         {
             var request = new HttpRequestMessage(method, uri);

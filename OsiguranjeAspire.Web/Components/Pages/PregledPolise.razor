@@ -1,4 +1,5 @@
 @page "/pregledpolise/{BrPolise:int}"
+@page "/pregledpolise/nova"
 @rendermode InteractiveServer
 @using System.Net
 @using System.Security.Claims
@@ -6,10 +7,11 @@
 @using OsiguranjeAspire.Contracts.Polise
 @inject PoliseApiClient PoliseClient
 @inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>Pregled polise</PageTitle>
 
-<h3>Pregled polise</h3>
+<h3>@(isNewPolicy ? "Nova polisa" : "Pregled polise")</h3>
 
 @if (isLoading)
 {
@@ -112,13 +114,28 @@ else if (policy is not null)
         errorMessage = null;
         validationError = null;
         isEditing = false;
+        isNewPolicy = BrPolise == 0;
 
         try
         {
+            var user = (await AuthProvider.GetAuthenticationStateAsync()).User;
+            if (isNewPolicy)
+            {
+                if (!int.TryParse(user.FindFirst("id")?.Value, out var employeeId))
+                {
+                    errorMessage = "Nije moguće odrediti zaposlenog za novu polisu.";
+                    return;
+                }
+
+                policy = new PolisaDTO { IdZaposlenog = employeeId };
+                editPolicy = Copy(policy);
+                canEdit = user.FindFirst("roleId")?.Value is "2" or "3";
+                isEditing = canEdit;
+                return;
+            }
+
             policy = await PoliseClient.GetAsync(BrPolise);
             editPolicy = Copy(policy);
-
-            var user = (await AuthProvider.GetAuthenticationStateAsync()).User;
             canEdit = IsAllowedToEdit(user, policy);
         }
         catch (PoliseApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -154,6 +171,12 @@ else if (policy is not null)
 
     private void CancelEdit()
     {
+        if (isNewPolicy)
+        {
+            NavigationManager.NavigateTo("/polise");
+            return;
+        }
+
         if (policy is null)
             return;
 
@@ -177,7 +200,16 @@ else if (policy is not null)
         isSaving = true;
         try
         {
-            var saved = await PoliseClient.UpdateAsync(editPolicy);
+            var saved = isNewPolicy
+                ? await PoliseClient.CreateAsync(editPolicy)
+                : await PoliseClient.UpdateAsync(editPolicy);
+
+            if (isNewPolicy)
+            {
+                NavigationManager.NavigateTo($"/pregledpolise/{saved.BrPolise}");
+                return;
+            }
+
             policy = saved;
             editPolicy = Copy(saved);
             isEditing = false;
@@ -216,6 +248,8 @@ else if (policy is not null)
             int.TryParse(user.FindFirst("id")?.Value, out var employeeId) &&
             employeeId == loadedPolicy.IdZaposlenog;
     }
+
+    private bool isNewPolicy;
 
     private static PolisaDTO Copy(PolisaDTO source) => new()
     {

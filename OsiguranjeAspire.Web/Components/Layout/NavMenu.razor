@@ -38,7 +38,7 @@
                     var roleId = authState.User.FindFirst("roleId")?.Value;
                 }
 
-                @if (roleId == "2")
+                @if (roleId is "2" or "3")
                 {
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="polise">
@@ -66,7 +66,7 @@
                 @if (roleId == "2")
                 {
                     <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="https://localhost/OsiguranjePHP/novaPolisa.php" target="_self">
+                        <NavLink class="nav-link" href="pregledpolise/nova">
                             <span class="bi bi-plus-square"></span> Nova polisa
                         </NavLink>
                     </div>

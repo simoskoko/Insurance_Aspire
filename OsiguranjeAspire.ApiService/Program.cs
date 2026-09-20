@@ -131,6 +131,58 @@ app.MapGet("/api/polise/{brPolise:int}", async (int brPolise, HttpContext contex
     return polisa is null ? Results.NotFound() : Results.Ok(polisa);
 });
 
+app.MapPost("/api/polise", async (PolisaDTO request, HttpContext context, OsiguranjeContext db) =>
+{
+    var employee = await GetCurrentEmployee(context, db);
+    if (employee is null)
+        return Results.Unauthorized();
+
+    if (employee.RoleId is not (2 or 3))
+        return Results.Forbid();
+
+    if (string.IsNullOrWhiteSpace(request.JMBGNosilac) ||
+        string.IsNullOrWhiteSpace(request.ImeNosilac) ||
+        string.IsNullOrWhiteSpace(request.TipNosilac))
+    {
+        return Results.BadRequest("Podaci nosioca polise su obavezni.");
+    }
+
+    if (request.DatumIsteka < request.DatumPocetka)
+        return Results.BadRequest("Datum isteka mora biti nakon datuma početka.");
+
+    var polisa = new Polisa
+    {
+        JMBGNosilac = request.JMBGNosilac,
+        ImeNosilac = request.ImeNosilac,
+        TipNosilac = request.TipNosilac,
+        VrstaId = request.VrstaId,
+        LOBId = request.LOBId,
+        Premija = request.Premija,
+        VrstaPlacanjaId = request.VrstaPlacanjaId,
+        DatumPocetka = request.DatumPocetka,
+        DatumIsteka = request.DatumIsteka,
+        IdZaposlenog = employee.Id
+    };
+
+    db.Polise.Add(polisa);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new PolisaDTO
+    {
+        BrPolise = polisa.BrPolise,
+        JMBGNosilac = polisa.JMBGNosilac,
+        ImeNosilac = polisa.ImeNosilac,
+        TipNosilac = polisa.TipNosilac,
+        VrstaId = polisa.VrstaId,
+        LOBId = polisa.LOBId,
+        Premija = polisa.Premija,
+        VrstaPlacanjaId = polisa.VrstaPlacanjaId,
+        DatumPocetka = polisa.DatumPocetka,
+        DatumIsteka = polisa.DatumIsteka,
+        IdZaposlenog = polisa.IdZaposlenog
+    });
+});
+
 app.MapPut("/api/polise/{brPolise:int}", async (int brPolise, PolisaDTO request, HttpContext context, OsiguranjeContext db) =>
 {
     var employee = await GetCurrentEmployee(context, db);
