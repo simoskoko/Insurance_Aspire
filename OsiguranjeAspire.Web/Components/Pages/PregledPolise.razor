@@ -56,7 +56,17 @@ else if (policy is not null)
             </div>
             <div class="col-md-6">
                 <label class="form-label">LOB ID</label>
-                @if (isEditing) { <InputNumber class="form-control" @bind-Value="editPolicy.LOBId" /> } else { <p class="form-control-plaintext">@policy.LOBId</p> }
+                @if (isEditing)
+                {
+                    <InputSelect class="form-select" @bind-Value="editPolicy.LOBId">
+                        <option value="0">Izaberite LOB</option>
+                        @foreach (var lob in lobovi)
+                        {
+                            <option value="@lob.LobId">@lob.NazivLob</option>
+                        }
+                    </InputSelect>
+                }
+                else { <p class="form-control-plaintext">@policy.LOBId</p> }
             </div>
             <div class="col-md-6">
                 <label class="form-label">Premija</label>
@@ -65,7 +75,17 @@ else if (policy is not null)
             </div>
             <div class="col-md-6">
                 <label class="form-label">Vrsta plaćanja ID</label>
-                @if (isEditing) { <InputNumber class="form-control" @bind-Value="editPolicy.VrstaPlacanjaId" /> } else { <p class="form-control-plaintext">@policy.VrstaPlacanjaId</p> }
+                @if (isEditing)
+                {
+                    <InputSelect class="form-select" @bind-Value="editPolicy.VrstaPlacanjaId">
+                        <option value="0">Izaberite vrstu plaćanja</option>
+                        @foreach (var vrstaPlacanja in vrstePlacanja)
+                        {
+                            <option value="@vrstaPlacanja.VrstaPlacanjaId">@vrstaPlacanja.NazivVrstaPlacanja</option>
+                        }
+                    </InputSelect>
+                }
+                else { <p class="form-control-plaintext">@policy.VrstaPlacanjaId</p> }
             </div>
             <div class="col-md-6">
                 <label class="form-label">Datum početka</label>
@@ -77,7 +97,7 @@ else if (policy is not null)
             </div>
             <div class="col-md-6">
                 <label class="form-label">ID zaposlenog</label>
-                @if (isEditing) { <InputNumber class="form-control" @bind-Value="editPolicy.IdZaposlenog" /> } else { <p class="form-control-plaintext">@policy.IdZaposlenog</p> }
+                <input class="form-control" value="@policy.IdZaposlenog" readonly />
             </div>
         </div>
 
@@ -105,6 +125,8 @@ else if (policy is not null)
     private bool isEditing;
     private bool isSaving;
     private bool canEdit;
+    private List<SifarnikLobDTO> lobovi = new();
+    private List<SifarnikVrstaPlacanjaDTO> vrstePlacanja = new();
     private string? errorMessage;
     private string? validationError;
 
@@ -119,6 +141,12 @@ else if (policy is not null)
         try
         {
             var user = (await AuthProvider.GetAuthenticationStateAsync()).User;
+            var loboviTask = PoliseClient.GetLoboviAsync();
+            var vrstePlacanjaTask = PoliseClient.GetVrstePlacanjaAsync();
+            await Task.WhenAll(loboviTask, vrstePlacanjaTask);
+            lobovi = await loboviTask;
+            vrstePlacanja = await vrstePlacanjaTask;
+
             if (isNewPolicy)
             {
                 if (!int.TryParse(user.FindFirst("id")?.Value, out var employeeId))
@@ -127,7 +155,12 @@ else if (policy is not null)
                     return;
                 }
 
-                policy = new PolisaDTO { IdZaposlenog = employeeId };
+                var nextNumber = await PoliseClient.GetNextNumberAsync();
+                policy = new PolisaDTO
+                {
+                    BrPolise = nextNumber,
+                    IdZaposlenog = employeeId
+                };
                 editPolicy = Copy(policy);
                 canEdit = user.FindFirst("roleId")?.Value is "2" or "3";
                 isEditing = canEdit;

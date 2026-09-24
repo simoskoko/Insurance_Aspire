@@ -75,6 +75,35 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 });
 
+app.MapGet("/api/polise/next-number", async (OsiguranjeContext db) =>
+{
+    var lastNumber = await db.Polise
+        .Select(p => (int?)p.BrPolise)
+        .MaxAsync();
+
+    return lastNumber.GetValueOrDefault() + 1;
+});
+
+app.MapGet("/api/sifarnici/lob", async (OsiguranjeContext db) =>
+    await db.SifarnikLOB
+        .OrderBy(s => s.NazivLob)
+        .Select(s => new SifarnikLobDTO
+        {
+            LobId = s.LobId,
+            NazivLob = s.NazivLob
+        })
+        .ToListAsync());
+
+app.MapGet("/api/sifarnici/vrste-placanja", async (OsiguranjeContext db) =>
+    await db.SifarnikVrstaPlacanja
+        .OrderBy(s => s.NazivVrstaPlacanja)
+        .Select(s => new SifarnikVrstaPlacanjaDTO
+        {
+            VrstaPlacanjaId = s.VrstaPlacanjaId,
+            NazivVrstaPlacanja = s.NazivVrstaPlacanja
+        })
+        .ToListAsync());
+
 app.MapGet("/api/polise", async (OsiguranjeContext db) =>
     await db.Polise
         .Select(p => new PolisaDTO

@@ -40,6 +40,24 @@ namespace OsiguranjeAspire.Web
                 ?? throw new InvalidOperationException("API nije vratila polisu.");
         }
 
+        public async Task<int> GetNextNumberAsync()
+        {
+            using var request = await CreateRequestAsync(HttpMethod.Get, "api/polise/next-number");
+            using var response = await _client.SendAsync(request);
+            await EnsureSuccessAsync(response);
+            return await response.Content.ReadFromJsonAsync<int>();
+        }
+
+        public async Task<List<SifarnikLobDTO>> GetLoboviAsync()
+        {
+            return await _client.GetFromJsonAsync<List<SifarnikLobDTO>>("api/sifarnici/lob") ?? new();
+        }
+
+        public async Task<List<SifarnikVrstaPlacanjaDTO>> GetVrstePlacanjaAsync()
+        {
+            return await _client.GetFromJsonAsync<List<SifarnikVrstaPlacanjaDTO>>("api/sifarnici/vrste-placanja") ?? new();
+        }
+
         public async Task<PolisaDTO> UpdateAsync(PolisaDTO polisa)
         {
             using var request = await CreateRequestAsync(HttpMethod.Put, $"api/polise/{polisa.BrPolise}");
@@ -80,4 +98,3 @@ namespace OsiguranjeAspire.Web
         }
     }
 }
-  
