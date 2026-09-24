@@ -112,7 +112,6 @@ app.MapGet("/api/polise", async (OsiguranjeContext db) =>
             ImeNosilac = p.ImeNosilac,
             JMBGNosilac = p.JMBGNosilac,
             TipNosilac = p.TipNosilac,
-            VrstaId = p.VrstaId,
             LOBId = p.LOBId,
             Premija = p.Premija,
             VrstaPlacanjaId = p.VrstaPlacanjaId,
@@ -147,7 +146,6 @@ app.MapGet("/api/polise/{brPolise:int}", async (int brPolise, HttpContext contex
             ImeNosilac = p.ImeNosilac,
             JMBGNosilac = p.JMBGNosilac,
             TipNosilac = p.TipNosilac,
-            VrstaId = p.VrstaId,
             LOBId = p.LOBId,
             Premija = p.Premija,
             VrstaPlacanjaId = p.VrstaPlacanjaId,
@@ -184,7 +182,6 @@ app.MapPost("/api/polise", async (PolisaDTO request, HttpContext context, Osigur
         JMBGNosilac = request.JMBGNosilac,
         ImeNosilac = request.ImeNosilac,
         TipNosilac = request.TipNosilac,
-        VrstaId = request.VrstaId,
         LOBId = request.LOBId,
         Premija = request.Premija,
         VrstaPlacanjaId = request.VrstaPlacanjaId,
@@ -202,7 +199,6 @@ app.MapPost("/api/polise", async (PolisaDTO request, HttpContext context, Osigur
         JMBGNosilac = polisa.JMBGNosilac,
         ImeNosilac = polisa.ImeNosilac,
         TipNosilac = polisa.TipNosilac,
-        VrstaId = polisa.VrstaId,
         LOBId = polisa.LOBId,
         Premija = polisa.Premija,
         VrstaPlacanjaId = polisa.VrstaPlacanjaId,
@@ -236,7 +232,6 @@ app.MapPut("/api/polise/{brPolise:int}", async (int brPolise, PolisaDTO request,
     polisa.JMBGNosilac = request.JMBGNosilac;
     polisa.ImeNosilac = request.ImeNosilac;
     polisa.TipNosilac = request.TipNosilac;
-    polisa.VrstaId = request.VrstaId;
     polisa.LOBId = request.LOBId;
     polisa.Premija = request.Premija;
     polisa.VrstaPlacanjaId = request.VrstaPlacanjaId;
@@ -252,7 +247,6 @@ app.MapPut("/api/polise/{brPolise:int}", async (int brPolise, PolisaDTO request,
         JMBGNosilac = polisa.JMBGNosilac,
         ImeNosilac = polisa.ImeNosilac,
         TipNosilac = polisa.TipNosilac,
-        VrstaId = polisa.VrstaId,
         LOBId = polisa.LOBId,
         Premija = polisa.Premija,
         VrstaPlacanjaId = polisa.VrstaPlacanjaId,

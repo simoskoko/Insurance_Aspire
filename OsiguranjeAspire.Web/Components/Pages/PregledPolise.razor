@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @using System.Net
 @using System.Security.Claims
+@using System.Globalization
 @using Microsoft.AspNetCore.Components.Authorization
 @using OsiguranjeAspire.Contracts.Polise
 @inject PoliseApiClient PoliseClient
@@ -51,10 +52,6 @@ else if (policy is not null)
                 <ValidationMessage For="@(() => editPolicy.TipNosilac)" />
             </div>
             <div class="col-md-6">
-                <label class="form-label">Vrsta ID</label>
-                @if (isEditing) { <InputNumber class="form-control" @bind-Value="editPolicy.VrstaId" /> } else { <p class="form-control-plaintext">@policy.VrstaId</p> }
-            </div>
-            <div class="col-md-6">
                 <label class="form-label">LOB ID</label>
                 @if (isEditing)
                 {
@@ -89,11 +86,11 @@ else if (policy is not null)
             </div>
             <div class="col-md-6">
                 <label class="form-label">Datum početka</label>
-                @if (isEditing) { <InputDate class="form-control" @bind-Value="editPolicy.DatumPocetka" /> } else { <p class="form-control-plaintext">@policy.DatumPocetka.ToShortDateString()</p> }
+                @if (isEditing) { <InputDate class="form-control" Culture="@EuropeanCulture" @bind-Value="editPolicy.DatumPocetka" /> } else { <p class="form-control-plaintext">@policy.DatumPocetka.ToString("dd/MM/yyyy")</p> }
             </div>
             <div class="col-md-6">
                 <label class="form-label">Datum isteka</label>
-                @if (isEditing) { <InputDate class="form-control" @bind-Value="editPolicy.DatumIsteka" /> } else { <p class="form-control-plaintext">@policy.DatumIsteka.ToShortDateString()</p> }
+                @if (isEditing) { <InputDate class="form-control" Culture="@EuropeanCulture" @bind-Value="editPolicy.DatumIsteka" /> } else { <p class="form-control-plaintext">@policy.DatumIsteka.ToString("dd/MM/yyyy")</p> }
             </div>
             <div class="col-md-6">
                 <label class="form-label">ID zaposlenog</label>
@@ -127,6 +124,7 @@ else if (policy is not null)
     private bool canEdit;
     private List<SifarnikLobDTO> lobovi = new();
     private List<SifarnikVrstaPlacanjaDTO> vrstePlacanja = new();
+    private static readonly CultureInfo EuropeanCulture = CultureInfo.GetCultureInfo("en-GB");
     private string? errorMessage;
     private string? validationError;
 
@@ -159,6 +157,8 @@ else if (policy is not null)
                 policy = new PolisaDTO
                 {
                     BrPolise = nextNumber,
+                    DatumPocetka = new DateTime(2026, 1, 1),
+                    DatumIsteka = new DateTime(2026, 1, 1),
                     IdZaposlenog = employeeId
                 };
                 editPolicy = Copy(policy);
@@ -290,7 +290,6 @@ else if (policy is not null)
         JMBGNosilac = source.JMBGNosilac,
         ImeNosilac = source.ImeNosilac,
         TipNosilac = source.TipNosilac,
-        VrstaId = source.VrstaId,
         LOBId = source.LOBId,
         Premija = source.Premija,
         VrstaPlacanjaId = source.VrstaPlacanjaId,

@@ -14,7 +14,6 @@ namespace OsiguranjeAspire.Contracts.Polise
         public string ImeNosilac { get; set; }
         [Required]
         public string TipNosilac { get; set; }
-        public int VrstaId { get; set; }
         public int LOBId { get; set; }
         [Range(0, double.MaxValue)]
         public decimal Premija { get; set; }
