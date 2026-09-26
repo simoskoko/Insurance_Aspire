@@ -1,6 +1,8 @@
 ﻿@using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
+@using OsiguranjeAspire.Web.Auth
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -17,15 +19,6 @@
                 <span class="bi bi-house-door-fill" aria-hidden="true"></span> Home
             </NavLink>
         </div>
-        <AuthorizeView>
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="polise">
-                        <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Polise
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="weather">
                 <span class="bi bi-list-nested" aria-hidden="true"></span> Weather
@@ -38,7 +31,7 @@
                     var roleId = authState.User.FindFirst("roleId")?.Value;
                 }
 
-                @if (roleId is "2" or "3")
+                @if (roleId is "1" or "2")
                 {
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="polise">
@@ -63,7 +56,7 @@
                     var roleId = authState.User.FindFirst("roleId")?.Value;
                 }
 
-                @if (roleId == "2")
+                @if (roleId == "2" || roleId == "3")
                 {
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="pregledpolise/nova">
@@ -77,11 +70,9 @@
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
-                    <form method="post" action="/auth/logout">
-                        <button type="submit" class="nav-link btn btn-link p-0">
-                            <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Odjava
-                        </button>
-                    </form>
+                    <button type="button" class="nav-link btn btn-link p-0" @onclick="Logout">
+                        <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Odjava
+                    </button>
                 </div>
             </Authorized>
             <NotAuthorized>
@@ -95,3 +86,13 @@
 
     </nav>
 </div>
+
+@code {
+    private void Logout()
+    {
+        if (AuthenticationStateProvider is SessionAuthenticationStateProvider session)
+            session.ClearUser();
+
+        Navigation.NavigateTo("/login");
+    }
+}

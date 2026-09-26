@@ -25,4 +25,10 @@ public sealed class SessionAuthenticationStateProvider : AuthenticationStateProv
         currentUser = new ClaimsPrincipal(new ClaimsIdentity(claims, "session"));
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
+
+    public void ClearUser()
+    {
+        currentUser = new ClaimsPrincipal(new ClaimsIdentity());
+        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    }
 }

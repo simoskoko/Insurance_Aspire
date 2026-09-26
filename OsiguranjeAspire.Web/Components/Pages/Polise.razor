@@ -11,7 +11,11 @@
 
 <h3>Polise</h3>
 
-@if (polise == null)
+@if (!hasAccess)
+{
+    <p>Nemate dozvolu za pregled polisa zaposlenih.</p>
+}
+else if (polise == null)
 {
     <p>Loading...</p>
 }
@@ -51,6 +55,7 @@ else
 @code {
     private List<KorisnikDTO> korisnici = new();
     private List<PolisaDTO> polise = new();
+    private bool hasAccess;
     private bool isLoading;
 
     protected override async Task OnInitializedAsync()
@@ -58,14 +63,22 @@ else
 
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var user = authState.User;
+        var roleId = user.FindFirst("roleId")?.Value;
+
+        hasAccess = roleId is "1" or "2";
+        if (!hasAccess)
+            return;
 
         var idClaim = user.FindFirst("id")?.Value;
 
-        if (!int.TryParse(idClaim, out var currentUserId))
-            return;
-
-        // Load only users whose NadredjeniId == current user id
-        korisnici = await ZaposleniClient.GetPodredjeniAsync(currentUserId);
+        if (roleId == "1")
+        {
+            korisnici = await ZaposleniClient.GetZaposleni();
+        }
+        else if (int.TryParse(idClaim, out var currentUserId))
+        {
+            korisnici = await ZaposleniClient.GetPodredjeniAsync(currentUserId);
+        }
 
         // Optionally load all policies at start
         polise = await PoliseClient.GetAllAsync();
