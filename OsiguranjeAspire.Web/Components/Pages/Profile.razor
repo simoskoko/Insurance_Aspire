@@ -1,0 +1,81 @@
+@page "/profile"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@using OsiguranjeAspire.Contracts.Korisnici
+@inject ProfileApiClient ProfileApi
+
+<PageTitle>Profil</PageTitle>
+
+<h1>Profil</h1>
+
+@if (isLoading)
+{
+    <p>Učitavanje profila...</p>
+}
+else if (errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+else if (profile is not null)
+{
+    <dl class="profile-details">
+        <dt>Ime</dt>
+        <dd>@profile.Name</dd>
+
+        <dt>Prezime</dt>
+        <dd>@profile.LastName</dd>
+
+        <dt>Korisnički ID</dt>
+        <dd>@profile.UserId</dd>
+
+        <dt>Datum rođenja</dt>
+        <dd>@(profile.DateOfBirth?.ToString("dd.MM.yyyy") ?? "Nije dostupan")</dd>
+
+        <dt>Ukupno zarađeno od prodatih polisa</dt>
+        <dd>@profile.TotalMoneyEarned.ToString("N2")</dd>
+    </dl>
+}
+
+@code {
+    private ProfileDTO? profile;
+    private string? errorMessage;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            profile = await ProfileApi.GetCurrentAsync();
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Podaci profila trenutno nisu dostupni.";
+        }
+        catch (InvalidOperationException exception)
+        {
+            errorMessage = exception.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
+
+<style>
+    .profile-details {
+        display: grid;
+        grid-template-columns: minmax(220px, 320px) 1fr;
+        gap: 0.75rem 1.5rem;
+        max-width: 720px;
+        margin-top: 2rem;
+    }
+
+    .profile-details dt {
+        font-weight: 600;
+    }
+
+    .profile-details dd {
+        margin: 0;
+    }
+</style>

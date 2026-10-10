@@ -132,6 +132,62 @@ async Task<Zaposleni?> GetCurrentEmployee(HttpContext context, OsiguranjeContext
         : await db.Zaposleni.FirstOrDefaultAsync(z => z.Username == username);
 }
 
+app.MapGet("/api/profile/me", async (HttpContext context, OsiguranjeContext db) =>
+{
+    var employee = await GetCurrentEmployee(context, db);
+    if (employee is null)
+        return Results.Unauthorized();
+
+    var profileData = await db.Zaposleni
+        .AsNoTracking()
+        .Where(z => z.Id == employee.Id)
+        .Select(z => new
+        {
+            z.Id,
+            z.ImePrezime,
+            z.Jmbg,
+            TotalMoneyEarned = db.Polise
+                .Where(p => p.IdZaposlenog == z.Id)
+                .Select(p => (decimal?)p.Premija)
+                .Sum() ?? 0m
+        })
+        .SingleOrDefaultAsync();
+
+    if (profileData is null)
+        return Results.NotFound();
+
+    var nameParts = profileData.ImePrezime
+        .Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+    var name = nameParts.Length > 0 ? nameParts[0] : string.Empty;
+    var lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
+
+    return Results.Ok(new ProfileDTO(
+        name,
+        lastName,
+        profileData.Id,
+        ParseDateOfBirth(profileData.Jmbg),
+        profileData.TotalMoneyEarned));
+});
+
+static DateOnly? ParseDateOfBirth(string? jmbg)
+{
+    if (string.IsNullOrWhiteSpace(jmbg) || jmbg.Length < 7 ||
+        !int.TryParse(jmbg[..2], out var day) ||
+        !int.TryParse(jmbg[2..4], out var month) ||
+        !int.TryParse(jmbg[4..7], out var yearInMillennium))
+    {
+        return null;
+    }
+
+    var year = yearInMillennium >= 900
+        ? 1900 + yearInMillennium
+        : 2000 + yearInMillennium;
+
+    return DateOnly.TryParse($"{year:D4}-{month:D2}-{day:D2}", out var date)
+        ? date
+        : null;
+}
+
 app.MapGet("/api/polise/{brPolise:int}", async (int brPolise, HttpContext context, OsiguranjeContext db) =>
 {
     var employee = await GetCurrentEmployee(context, db);

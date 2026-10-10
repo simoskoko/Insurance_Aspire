@@ -27,6 +27,11 @@ builder.Services.AddHttpClient<ZaposleniApiClient>(client =>
     client.BaseAddress = new("http://apiservice");
 });
 
+builder.Services.AddHttpClient<ProfileApiClient>(client =>
+{
+    client.BaseAddress = new("http://apiservice");
+});
+
 // register auth API client used by the login endpoint
 builder.Services.AddHttpClient<AuthApi>(client =>
 {
