@@ -256,6 +256,27 @@ app.MapPut("/api/polise/{brPolise:int}", async (int brPolise, PolisaDTO request,
     });
 });
 
+app.MapDelete("/api/polise/{brPolise:int}", async (int brPolise, HttpContext context, OsiguranjeContext db) =>
+{
+    var employee = await GetCurrentEmployee(context, db);
+    if (employee is null)
+        return Results.Unauthorized();
+
+    var polisa = await db.Polise.SingleOrDefaultAsync(p => p.BrPolise == brPolise);
+    if (polisa is null)
+        return Results.NotFound();
+
+    var canDelete = employee.RoleId == 1 ||
+        (employee.RoleId == 3 && employee.Id == polisa.IdZaposlenog);
+    if (!canDelete)
+        return Results.Forbid();
+
+    db.Polise.Remove(polisa);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
 app.MapGet("/api/polise/zaposleni/{IdZaposlenog:int}",
     async (int IdZaposlenog, OsiguranjeContext db) =>
     {

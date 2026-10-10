@@ -78,6 +78,13 @@ namespace OsiguranjeAspire.Web
                 ?? throw new InvalidOperationException("API nije vratila kreiranu polisu.");
         }
 
+        public async Task DeleteAsync(int brPolise)
+        {
+            using var request = await CreateRequestAsync(HttpMethod.Delete, $"api/polise/{brPolise}");
+            using var response = await _client.SendAsync(request);
+            await EnsureSuccessAsync(response);
+        }
+
         private async Task<HttpRequestMessage> CreateRequestAsync(HttpMethod method, string uri)
         {
             var request = new HttpRequestMessage(method, uri);

@@ -5,10 +5,12 @@
 @using System.Security.Claims
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.JSInterop
 @using OsiguranjeAspire.Contracts.Polise
 @inject PoliseApiClient PoliseClient
 @inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Pregled polise</PageTitle>
 
@@ -106,7 +108,8 @@ else if (policy is not null)
             }
             else if (canEdit)
             {
-                <button type="button" class="btn btn-primary" @onclick="BeginEdit">Edit</button>
+                <button type="button" class="btn btn-primary" @onclick="BeginEdit" disabled="@isDeleting">Edit</button>
+                <button type="button" class="btn btn-danger ms-2" @onclick="DeleteAsync" disabled="@isDeleting">Delete</button>
             }
         </div>
     </EditForm>
@@ -121,6 +124,7 @@ else if (policy is not null)
     private bool isLoading = true;
     private bool isEditing;
     private bool isSaving;
+    private bool isDeleting;
     private bool canEdit;
     private List<SifarnikLobDTO> lobovi = new();
     private List<SifarnikVrstaPlacanjaDTO> vrstePlacanja = new();
@@ -268,6 +272,46 @@ else if (policy is not null)
         finally
         {
             isSaving = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (policy is null || !canEdit || isDeleting)
+            return;
+
+        var confirmed = await JsRuntime.InvokeAsync<bool>(
+            "confirm",
+            "Da li ste sigurni da želite da obrišete ovu polisu?");
+        if (!confirmed)
+            return;
+
+        isDeleting = true;
+        errorMessage = null;
+        try
+        {
+            await PoliseClient.DeleteAsync(policy.BrPolise);
+            NavigationManager.NavigateTo("/polise");
+        }
+        catch (PoliseApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            errorMessage = "Polisa nije pronađena.";
+        }
+        catch (PoliseApiException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            errorMessage = "Nemate pravo da obrišete ovu polisu.";
+        }
+        catch (PoliseApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            errorMessage = "Niste autorizovani za brisanje ove polise.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Došlo je do greške pri brisanju polise.";
+        }
+        finally
+        {
+            isDeleting = false;
         }
     }
 
