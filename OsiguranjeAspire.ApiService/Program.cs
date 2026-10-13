@@ -146,6 +146,7 @@ app.MapGet("/api/profile/me", async (HttpContext context, OsiguranjeContext db) 
             z.Id,
             z.ImePrezime,
             z.Jmbg,
+            z.DatumRodjenja,
             TotalMoneyEarned = db.Polise
                 .Where(p => p.IdZaposlenog == z.Id)
                 .Select(p => (decimal?)p.Premija)
@@ -165,27 +166,48 @@ app.MapGet("/api/profile/me", async (HttpContext context, OsiguranjeContext db) 
         name,
         lastName,
         profileData.Id,
-        ParseDateOfBirth(profileData.Jmbg),
+        profileData.Jmbg,
+        profileData.DatumRodjenja,
         profileData.TotalMoneyEarned));
 });
 
-static DateOnly? ParseDateOfBirth(string? jmbg)
+app.MapPut("/api/profile/me", async (HttpContext context, OsiguranjeContext db, ProfileUpdateDTO request) =>
 {
-    if (string.IsNullOrWhiteSpace(jmbg) || jmbg.Length < 7 ||
-        !int.TryParse(jmbg[..2], out var day) ||
-        !int.TryParse(jmbg[2..4], out var month) ||
-        !int.TryParse(jmbg[4..7], out var yearInMillennium))
-    {
-        return null;
-    }
+    var employee = await GetCurrentEmployee(context, db);
+    if (employee is null)
+        return Results.Unauthorized();
 
-    var year = yearInMillennium >= 900
-        ? 1900 + yearInMillennium
-        : 2000 + yearInMillennium;
+    var name = request.Name.Trim();
+    var lastName = request.LastName.Trim();
+    var jmbg = request.Jmbg.Trim();
 
-    return DateOnly.TryParse($"{year:D4}-{month:D2}-{day:D2}", out var date)
-        ? date
-        : null;
+    if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(lastName))
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["Name"] = ["Ime i prezime su obavezni."]
+        });
+
+    if (request.DateOfBirth is null || !JmbgMatchesDateOfBirth(jmbg, request.DateOfBirth.Value))
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["Jmbg"] = ["JMBG mora sadržati datum rođenja koji odgovara datumu rođenja."]
+        });
+
+    employee.ImePrezime = $"{name} {lastName}";
+    employee.Jmbg = jmbg;
+    employee.DatumRodjenja = request.DateOfBirth;
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+static bool JmbgMatchesDateOfBirth(string jmbg, DateOnly dateOfBirth)
+{
+    if (jmbg.Length != 13 || jmbg.Any(character => character is < '0' or > '9'))
+        return false;
+
+    var expectedDate = $"{dateOfBirth:ddMMyyy}";
+    return jmbg[..7] == expectedDate;
 }
 
 app.MapGet("/api/polise/{brPolise:int}", async (int brPolise, HttpContext context, OsiguranjeContext db) =>

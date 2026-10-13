@@ -26,4 +26,23 @@ public sealed class ProfileApiClient(
         return await response.Content.ReadFromJsonAsync<ProfileDTO>()
             ?? throw new InvalidOperationException("API nije vratila podatke profila.");
     }
+
+    public async Task UpdateAsync(ProfileUpdateDTO profile)
+    {
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var username = authState.User.FindFirst("username")?.Value;
+
+        if (string.IsNullOrWhiteSpace(username))
+            throw new InvalidOperationException("Korisnik nije prijavljen.");
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, "api/profile/me")
+        {
+            Content = JsonContent.Create(profile)
+        };
+        request.Headers.Add("X-Username", username);
+
+        using var response = await httpClient.SendAsync(request);
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException("Čuvanje profila nije uspelo.");
+    }
 }

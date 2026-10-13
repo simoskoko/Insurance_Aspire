@@ -18,28 +18,86 @@ else if (errorMessage is not null)
 }
 else if (profile is not null)
 {
-    <dl class="profile-details">
-        <dt>Ime</dt>
-        <dd>@profile.Name</dd>
+    @if (isEditing)
+    {
+        <EditForm Model="editModel" OnValidSubmit="SaveAsync" class="profile-form">
+            <div class="mb-3">
+                <label for="name" class="form-label">Ime</label>
+                <InputText id="name" class="form-control" @bind-Value="editModel.Name" />
+            </div>
 
-        <dt>Prezime</dt>
-        <dd>@profile.LastName</dd>
+            <div class="mb-3">
+                <label for="lastName" class="form-label">Prezime</label>
+                <InputText id="lastName" class="form-control" @bind-Value="editModel.LastName" />
+            </div>
 
-        <dt>Korisnički ID</dt>
-        <dd>@profile.UserId</dd>
+            <div class="mb-3">
+                <label for="jmbg" class="form-label">JMBG</label>
+                <InputText id="jmbg" class="form-control" @bind-Value="editModel.Jmbg" inputmode="numeric" maxlength="13" />
+            </div>
 
-        <dt>Datum rođenja</dt>
-        <dd>@(profile.DateOfBirth?.ToString("dd.MM.yyyy") ?? "Nije dostupan")</dd>
+            <div class="mb-3">
+                <label for="dateOfBirth" class="form-label">Datum rođenja</label>
+                <InputDate id="dateOfBirth" class="form-control" @bind-Value="editModel.DateOfBirth" />
+            </div>
 
-        <dt>Ukupno zarađeno od prodatih polisa</dt>
-        <dd>@profile.TotalMoneyEarned.ToString("N2")</dd>
-    </dl>
+            @if (editErrorMessage is not null)
+            {
+                <div class="alert alert-danger" role="alert">@editErrorMessage</div>
+            }
+
+            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                @(isSaving ? "Čuvanje..." : "Sačuvaj")
+            </button>
+            <button type="button" class="btn btn-secondary ms-2" @onclick="CancelEditing" disabled="@isSaving">Otkaži</button>
+        </EditForm>
+    }
+    else
+    {
+        <div class="profile-form profile-display">
+            <div class="mb-3">
+                <label for="displayName" class="form-label">Ime</label>
+                <input id="displayName" class="form-control" value="@profile.Name" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="displayLastName" class="form-label">Prezime</label>
+                <input id="displayLastName" class="form-control" value="@profile.LastName" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="displayUserId" class="form-label">Korisnički ID</label>
+                <input id="displayUserId" class="form-control" value="@profile.UserId" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="displayJmbg" class="form-label">JMBG</label>
+                <input id="displayJmbg" class="form-control" value="@(string.IsNullOrWhiteSpace(profile.Jmbg) ? "Nije dostupan" : profile.Jmbg)" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="displayDateOfBirth" class="form-label">Datum rođenja</label>
+                <input id="displayDateOfBirth" class="form-control" value="@(profile.DateOfBirth?.ToString("dd.MM.yyyy") ?? "Nije dostupan")" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label for="displayTotalMoneyEarned" class="form-label">Ukupno zarađeno od prodatih polisa</label>
+                <input id="displayTotalMoneyEarned" class="form-control" value="@profile.TotalMoneyEarned.ToString("N2")" readonly />
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-primary mt-3" @onclick="BeginEditing">Izmeni profil</button>
+    }
 }
 
 @code {
     private ProfileDTO? profile;
+    private ProfileEditModel editModel = new();
     private string? errorMessage;
+    private string? editErrorMessage;
     private bool isLoading = true;
+    private bool isEditing;
+    private bool isSaving;
 
     protected override async Task OnInitializedAsync()
     {
@@ -60,6 +118,88 @@ else if (profile is not null)
             isLoading = false;
         }
     }
+
+    private void BeginEditing()
+    {
+        if (profile is null)
+            return;
+
+        editModel = new ProfileEditModel
+        {
+            Name = profile.Name,
+            LastName = profile.LastName,
+            Jmbg = profile.Jmbg,
+            DateOfBirth = profile.DateOfBirth
+        };
+        editErrorMessage = null;
+        isEditing = true;
+    }
+
+    private void CancelEditing()
+    {
+        isEditing = false;
+        editErrorMessage = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        editErrorMessage = ValidateEditModel();
+        if (editErrorMessage is not null)
+            return;
+
+        isSaving = true;
+        try
+        {
+            await ProfileApi.UpdateAsync(new ProfileUpdateDTO(
+                editModel.Name.Trim(),
+                editModel.LastName.Trim(),
+                editModel.Jmbg.Trim(),
+                editModel.DateOfBirth));
+
+            profile = profile! with
+            {
+                Name = editModel.Name.Trim(),
+                LastName = editModel.LastName.Trim(),
+                Jmbg = editModel.Jmbg.Trim(),
+                DateOfBirth = editModel.DateOfBirth
+            };
+            isEditing = false;
+        }
+        catch (HttpRequestException)
+        {
+            editErrorMessage = "Čuvanje profila nije uspelo.";
+        }
+        catch (InvalidOperationException exception)
+        {
+            editErrorMessage = exception.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private string? ValidateEditModel()
+    {
+        if (string.IsNullOrWhiteSpace(editModel.Name) || string.IsNullOrWhiteSpace(editModel.LastName))
+            return "Ime i prezime su obavezni.";
+
+        var jmbg = editModel.Jmbg.Trim();
+        if (editModel.DateOfBirth is null || jmbg.Length != 13 || jmbg.Any(character => character is < '0' or > '9'))
+            return "Unesite ispravan JMBG i datum rođenja.";
+
+        return jmbg[..7] == $"{editModel.DateOfBirth:ddMMyyy}"
+            ? null
+            : "Prvih sedam cifara JMBG-a mora odgovarati datumu rođenja.";
+    }
+
+    private sealed class ProfileEditModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Jmbg { get; set; } = string.Empty;
+        public DateOnly? DateOfBirth { get; set; }
+    }
 }
 
 <style>
@@ -77,5 +217,20 @@ else if (profile is not null)
 
     .profile-details dd {
         margin: 0;
+    }
+
+    .profile-form {
+        max-width: 480px;
+        margin-top: 2rem;
+    }
+
+    .profile-form .form-label {
+        font-size: 1.15rem;
+        font-weight: 700;
+    }
+
+    .profile-display .form-control {
+        background-color: var(--bs-secondary-bg);
+        font-size: 1.05rem;
     }
 </style>

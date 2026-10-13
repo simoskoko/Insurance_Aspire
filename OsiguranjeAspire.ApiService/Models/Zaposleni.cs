@@ -13,6 +13,7 @@ namespace OsiguranjeAspire.ApiService.Models
         public int Lob { get; set; }
         public int RoleId { get; set; }
         public string Jmbg { get; set; }
+        public DateOnly? DatumRodjenja { get; set; }
         public int? NadredjeniId { get; set; }
         public string ImePrezime { get; set; }
     }
