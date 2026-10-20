@@ -59,22 +59,6 @@ app.MapDefaultEndpoints();
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
 
-var summaries = new[]
-{
-    "Ledeno", "Hladno", "Hladnjikavo", "Prijatno", "Toplo", "Vrelo"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-15, 50),
-            summaries[Random.Shared.Next(summaries.Length)])).ToArray();
-    return forecast;
-});
-
 app.MapGet("/api/polise/next-number", async (OsiguranjeContext db) =>
 {
     var lastNumber = await db.Polise

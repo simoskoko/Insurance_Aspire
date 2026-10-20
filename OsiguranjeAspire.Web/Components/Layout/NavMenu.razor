@@ -19,14 +19,13 @@
                 <span class="bi bi-house-door-fill" aria-hidden="true"></span> Home
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-
         <AuthorizeView>
             <Authorized Context="authState">
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="pretraga-polisa">
+                        <span class="bi bi-search" aria-hidden="true"></span> Pretraga polisa
+                    </NavLink>
+                </div>
                 @{
                     var roleId = authState.User.FindFirst("roleId")?.Value;
                 }

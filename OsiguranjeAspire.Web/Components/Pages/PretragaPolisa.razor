@@ -1,0 +1,149 @@
+@page "/pretraga-polisa"
+@rendermode InteractiveServer
+@using OsiguranjeAspire.Contracts.Polise
+@using Microsoft.AspNetCore.Components.Authorization
+@inject PoliseApiClient PoliseClient
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Pretraga polisa</PageTitle>
+
+<h3>Pretraga polisa</h3>
+
+@if (isLoading)
+{
+    <p>Učitavanje polisa...</p>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <label for="policyNumber" class="form-label">Broj polise</label>
+            <input id="policyNumber" class="form-control" @bind="policyNumberFilter" @bind:event="oninput" />
+        </div>
+        <div class="col-md-3">
+            <label for="policyHolder" class="form-label">Nosilac</label>
+            <input id="policyHolder" class="form-control" @bind="policyHolderFilter" @bind:event="oninput" />
+        </div>
+        <div class="col-md-3">
+            <label for="agentId" class="form-label">Agent ID</label>
+            <input id="agentId" class="form-control" inputmode="numeric" @bind="agentIdFilter" @bind:event="oninput" />
+        </div>
+        <div class="col-md-3">
+            <label for="holderType" class="form-label">Tip nosioca</label>
+            <select id="holderType" class="form-select" @bind="holderTypeFilter">
+                <option value="">Svi tipovi</option>
+                @foreach (var holderType in HolderTypes)
+                {
+                    <option value="@holderType">@holderType</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span>Pronađeno polisa: @FilteredPolicies.Count</span>
+        <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilters">Obriši filtere</button>
+    </div>
+
+    @if (FilteredPolicies.Count == 0)
+    {
+        <p>Nema polisa koje odgovaraju zadatim kriterijumima.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Broj polise</th>
+                        <th>Nosilac polise</th>
+                        <th>Tip nosioca</th>
+                        <th>Agent ID</th>
+                        <th>Premija</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var policy in FilteredPolicies)
+                    {
+                        <tr>
+                            <td><a href="pregledpolise/@policy.BrPolise">@policy.BrPolise</a></td>
+                            <td>@policy.ImeNosilac</td>
+                            <td>@policy.TipNosilac</td>
+                            <td>@policy.IdZaposlenog</td>
+                            <td>@policy.Premija</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private List<PolisaDTO> policies = new();
+    private bool isLoading = true;
+    private bool isAuthenticated;
+    private string? errorMessage;
+    private string policyNumberFilter = string.Empty;
+    private string policyHolderFilter = string.Empty;
+    private string agentIdFilter = string.Empty;
+    private string holderTypeFilter = string.Empty;
+
+    private IReadOnlyList<string> HolderTypes => policies
+        .Select(policy => policy.TipNosilac)
+        .Where(type => !string.IsNullOrWhiteSpace(type))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(type => type)
+        .ToList();
+
+    private IReadOnlyList<PolisaDTO> FilteredPolicies => policies
+        .Where(MatchesFilters)
+        .OrderBy(policy => policy.BrPolise)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+        if (!isAuthenticated)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        try
+        {
+            policies = await PoliseClient.GetAllAsync();
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Došlo je do greške pri učitavanju polisa.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private bool MatchesFilters(PolisaDTO policy)
+    {
+        return policy.BrPolise.ToString().Contains(policyNumberFilter.Trim(), StringComparison.OrdinalIgnoreCase)
+            && policy.ImeNosilac.Contains(policyHolderFilter.Trim(), StringComparison.OrdinalIgnoreCase)
+            && policy.IdZaposlenog.ToString().Contains(agentIdFilter.Trim(), StringComparison.OrdinalIgnoreCase)
+            && (string.IsNullOrWhiteSpace(holderTypeFilter)
+                || string.Equals(policy.TipNosilac, holderTypeFilter, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ClearFilters()
+    {
+        policyNumberFilter = string.Empty;
+        policyHolderFilter = string.Empty;
+        agentIdFilter = string.Empty;
+        holderTypeFilter = string.Empty;
+    }
+}

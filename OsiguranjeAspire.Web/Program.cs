@@ -11,12 +11,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents(); //ne secam se da li sam ovo dodao ja ili je ovo default, ali neka ostane
 builder.Services.AddOutputCache();
-builder.Services.AddHttpClient<WeatherApiClient>(client =>
-    {
-        client.BaseAddress = new("http://apiservice");
-    }
-);
-
 builder.Services.AddHttpClient<PoliseApiClient>(client =>
 {
     client.BaseAddress = new("http://apiservice");
