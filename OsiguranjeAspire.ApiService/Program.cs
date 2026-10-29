@@ -116,6 +116,109 @@ async Task<Zaposleni?> GetCurrentEmployee(HttpContext context, OsiguranjeContext
         : await db.Zaposleni.FirstOrDefaultAsync(z => z.Username == username);
 }
 
+async Task<Zaposleni?> GetAdminEmployee(HttpContext context, OsiguranjeContext db)
+{
+    var employee = await GetCurrentEmployee(context, db);
+    return employee?.RoleId == 1 ? employee : null;
+}
+
+app.MapGet("/api/admin/profiles", async (HttpContext context, OsiguranjeContext db) =>
+{
+    if (await GetAdminEmployee(context, db) is null)
+        return Results.Forbid();
+
+    var profiles = await db.Zaposleni
+        .AsNoTracking()
+        .OrderBy(z => z.ImePrezime)
+        .Select(z => new AdminProfileSearchDTO(
+            z.Id,
+            z.Username,
+            z.ImePrezime,
+            string.Empty,
+            z.Jmbg,
+            z.DatumRodjenja,
+            z.RoleId,
+            z.Lob))
+        .ToListAsync();
+
+    return Results.Ok(profiles.Select(profile =>
+    {
+        var nameParts = profile.Name.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var name = nameParts.Length > 0 ? nameParts[0] : string.Empty;
+        var lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
+        return profile with { Name = name, LastName = lastName };
+    }));
+});
+
+app.MapGet("/api/profile/{id:int}", async (int id, HttpContext context, OsiguranjeContext db) =>
+{
+    if (await GetAdminEmployee(context, db) is null)
+        return Results.Forbid();
+
+    var profileData = await db.Zaposleni
+        .AsNoTracking()
+        .Where(z => z.Id == id)
+        .Select(z => new
+        {
+            z.Id,
+            z.ImePrezime,
+            z.Jmbg,
+            z.DatumRodjenja,
+            TotalMoneyEarned = db.Polise
+                .Where(p => p.IdZaposlenog == z.Id)
+                .Select(p => (decimal?)p.Premija)
+                .Sum() ?? 0m
+        })
+        .SingleOrDefaultAsync();
+
+    if (profileData is null)
+        return Results.NotFound();
+
+    var nameParts = profileData.ImePrezime.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+    var name = nameParts.Length > 0 ? nameParts[0] : string.Empty;
+    var lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
+
+    return Results.Ok(new ProfileDTO(
+        name,
+        lastName,
+        profileData.Id,
+        profileData.Jmbg,
+        profileData.DatumRodjenja,
+        profileData.TotalMoneyEarned));
+});
+
+app.MapPut("/api/profile/{id:int}", async (int id, ProfileUpdateDTO request, HttpContext context, OsiguranjeContext db) =>
+{
+    if (await GetAdminEmployee(context, db) is null)
+        return Results.Forbid();
+
+    var name = request.Name.Trim();
+    var lastName = request.LastName.Trim();
+    var jmbg = request.Jmbg.Trim();
+
+    if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(lastName))
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["Name"] = ["Ime i prezime su obavezni."]
+        });
+
+    if (request.DateOfBirth is null || !JmbgMatchesDateOfBirth(jmbg, request.DateOfBirth.Value))
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["Jmbg"] = ["JMBG mora sadržati datum rođenja koji odgovara datumu rođenja."]
+        });
+
+    var employee = await db.Zaposleni.SingleOrDefaultAsync(z => z.Id == id);
+    if (employee is null)
+        return Results.NotFound();
+
+    employee.ImePrezime = $"{name} {lastName}";
+    employee.Jmbg = jmbg;
+    employee.DatumRodjenja = request.DateOfBirth;
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
 app.MapGet("/api/profile/me", async (HttpContext context, OsiguranjeContext db) =>
 {
     var employee = await GetCurrentEmployee(context, db);

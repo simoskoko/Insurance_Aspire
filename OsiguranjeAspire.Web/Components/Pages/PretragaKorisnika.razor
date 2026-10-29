@@ -1,0 +1,151 @@
+@page "/pretraga-korisnika"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@using OsiguranjeAspire.Contracts.Korisnici
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ProfileApiClient ProfileApi
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Pretraga korisnika</PageTitle>
+
+<h3>Pretraga korisnika</h3>
+
+@if (isLoading)
+{
+    <p>Učitavanje korisnika...</p>
+}
+else if (!isAdmin)
+{
+    <div class="alert alert-danger" role="alert">Nemate dozvolu za pregled korisnika.</div>
+}
+else if (errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <label for="userId" class="form-label">Korisnički ID</label>
+            <input id="userId" class="form-control" inputmode="numeric" @bind="userIdFilter" @bind:event="oninput" />
+        </div>
+        <div class="col-md-2">
+            <label for="username" class="form-label">Korisničko ime</label>
+            <input id="username" class="form-control" @bind="usernameFilter" @bind:event="oninput" />
+        </div>
+        <div class="col-md-3">
+            <label for="name" class="form-label">Ime i prezime</label>
+            <input id="name" class="form-control" @bind="nameFilter" @bind:event="oninput" />
+        </div>
+        <div class="col-md-3">
+            <label for="jmbg" class="form-label">JMBG</label>
+            <input id="jmbg" class="form-control" @bind="jmbgFilter" @bind:event="oninput" />
+        </div>
+        <div class="col-md-2">
+            <label for="roleId" class="form-label">Uloga</label>
+            <input id="roleId" class="form-control" inputmode="numeric" @bind="roleIdFilter" @bind:event="oninput" />
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span>Pronađeno korisnika: @FilteredProfiles.Count</span>
+        <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilters">Obriši filtere</button>
+    </div>
+
+    @if (FilteredProfiles.Count == 0)
+    {
+        <p>Nema korisnika koji odgovaraju zadatim kriterijumima.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Korisničko ime</th>
+                        <th>Ime i prezime</th>
+                        <th>JMBG</th>
+                        <th>Uloga</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var profile in FilteredProfiles)
+                    {
+                        <tr>
+                            <td>@profile.UserId</td>
+                            <td>@profile.Username</td>
+                            <td>@profile.Name @profile.LastName</td>
+                            <td>@profile.Jmbg</td>
+                            <td>@profile.RoleId</td>
+                            <td><a class="btn btn-sm btn-primary" href="profile/@profile.UserId">Otvori profil</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private List<AdminProfileSearchDTO> profiles = [];
+    private bool isLoading = true;
+    private bool isAdmin;
+    private string? errorMessage;
+    private string userIdFilter = string.Empty;
+    private string usernameFilter = string.Empty;
+    private string nameFilter = string.Empty;
+    private string jmbgFilter = string.Empty;
+    private string roleIdFilter = string.Empty;
+
+    private IReadOnlyList<AdminProfileSearchDTO> FilteredProfiles => profiles
+        .Where(MatchesFilters)
+        .OrderBy(profile => profile.Name)
+        .ThenBy(profile => profile.LastName)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        isAdmin = authState.User.FindFirst("roleId")?.Value == "1";
+        if (!isAdmin)
+        {
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            profiles = (await ProfileApi.GetAdminProfilesAsync()).ToList();
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Došlo je do greške pri učitavanju korisnika.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private bool MatchesFilters(AdminProfileSearchDTO profile)
+    {
+        var fullName = $"{profile.Name} {profile.LastName}";
+        return profile.UserId.ToString().Contains(userIdFilter.Trim(), StringComparison.OrdinalIgnoreCase)
+            && profile.Username.Contains(usernameFilter.Trim(), StringComparison.OrdinalIgnoreCase)
+            && fullName.Contains(nameFilter.Trim(), StringComparison.OrdinalIgnoreCase)
+            && profile.Jmbg.Contains(jmbgFilter.Trim(), StringComparison.OrdinalIgnoreCase)
+            && profile.RoleId.ToString().Contains(roleIdFilter.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ClearFilters()
+    {
+        userIdFilter = string.Empty;
+        usernameFilter = string.Empty;
+        nameFilter = string.Empty;
+        jmbgFilter = string.Empty;
+        roleIdFilter = string.Empty;
+    }
+}

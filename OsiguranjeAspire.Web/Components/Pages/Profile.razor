@@ -1,8 +1,11 @@
 @page "/profile"
+@page "/profile/{UserId:int}"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @rendermode InteractiveServer
 @using OsiguranjeAspire.Contracts.Korisnici
+@using Microsoft.AspNetCore.Components.Authorization
 @inject ProfileApiClient ProfileApi
+@inject AuthenticationStateProvider AuthProvider
 
 <PageTitle>Profil</PageTitle>
 
@@ -91,6 +94,9 @@ else if (profile is not null)
 }
 
 @code {
+    [Parameter]
+    public int? UserId { get; set; }
+
     private ProfileDTO? profile;
     private ProfileEditModel editModel = new();
     private string? errorMessage;
@@ -101,9 +107,22 @@ else if (profile is not null)
 
     protected override async Task OnInitializedAsync()
     {
+        if (UserId.HasValue)
+        {
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            if (authState.User.FindFirst("roleId")?.Value != "1")
+            {
+                errorMessage = "Nemate dozvolu za pregled ovog profila.";
+                isLoading = false;
+                return;
+            }
+        }
+
         try
         {
-            profile = await ProfileApi.GetCurrentAsync();
+            profile = UserId.HasValue
+                ? await ProfileApi.GetByIdAsync(UserId.Value)
+                : await ProfileApi.GetCurrentAsync();
         }
         catch (HttpRequestException)
         {
@@ -150,11 +169,16 @@ else if (profile is not null)
         isSaving = true;
         try
         {
-            await ProfileApi.UpdateAsync(new ProfileUpdateDTO(
+            var update = new ProfileUpdateDTO(
                 editModel.Name.Trim(),
                 editModel.LastName.Trim(),
                 editModel.Jmbg.Trim(),
-                editModel.DateOfBirth));
+                editModel.DateOfBirth);
+
+            if (UserId.HasValue)
+                await ProfileApi.UpdateAsync(UserId.Value, update);
+            else
+                await ProfileApi.UpdateAsync(update);
 
             profile = profile! with
             {
@@ -165,9 +189,9 @@ else if (profile is not null)
             };
             isEditing = false;
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException exception)
         {
-            editErrorMessage = "Čuvanje profila nije uspelo.";
+            errorMessage = exception.Message;
         }
         catch (InvalidOperationException exception)
         {
@@ -188,7 +212,10 @@ else if (profile is not null)
         if (editModel.DateOfBirth is null || jmbg.Length != 13 || jmbg.Any(character => character is < '0' or > '9'))
             return "Unesite ispravan JMBG i datum rođenja.";
 
-        return jmbg[..7] == $"{editModel.DateOfBirth:ddMMyyy}"
+        var dateOfBirth = editModel.DateOfBirth.Value;
+        var expectedJmbgPrefix = $"{dateOfBirth.Day:00}{dateOfBirth.Month:00}{dateOfBirth.Year % 1000:000}";
+
+        return jmbg[..7] == expectedJmbgPrefix
             ? null
             : "Prvih sedam cifara JMBG-a mora odgovarati datumu rođenja.";
     }
