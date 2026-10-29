@@ -1,12 +1,6 @@
-Aplikacija je funkcionalna u osnovi. Probao sam da dodam login, neuspesno.
+Апликација је функционална, све функционалности су тестиране.
 
-Endpoint za prikazivanje svih korisnika je dostupan na /users i funkcionalan je.
-
-Dodati:
-- Login
-- Logout
-- Dodavanje , izmena i brisanje korisnika (samo za admina)
-- Dodavanje, izmena i brisanje polisa (za sve)
-- stranica za prikazivanje polisa (za sve) na kojoj zaposleni moze da vidi svoje polise, a admin(menadzer) sve polise
-- stranica za prikazivanje podredjenih (za menadzere)
-- stranica za pregled profila (za sve)
+Белешке током последњег тестирања:
+- додати поруке грешке и слично где фали
+- униформисати UI. Боја дугмади мора припадати дефинисаној палети, провери фонтове.
+- недостаје полирање - пединг, симболи, лого.
