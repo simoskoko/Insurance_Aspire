@@ -33,7 +33,9 @@ builder.Services.AddHttpClient<AuthApi>(client =>
 });
 
 //auth servis
- builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie();
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options => options.LoginPath = "/login");
 builder.Services.AddAuthorization();
 builder.Services.AddAuthorizationCore();
  builder.Services.AddScoped<SessionAuthenticationStateProvider>();

@@ -155,7 +155,7 @@
         if (Navigation != null)
         {
             var uri = new Uri(Navigation.Uri);
-            isLocalhost = uri.Host == "localhost" || uri.Host == "127.0.0.1" || uri.Host.StartsWith("localhost:");
+            isLocalhost = uri.Host == "localhost" || uri.Host == "127.0.0.1" || uri.Host.StartsWith("localhost:") || uri.Host.StartsWith("https://localhost:7258");
         }
     }
 
